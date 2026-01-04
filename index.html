@@ -59,9 +59,9 @@
      </div>
     </div><!-- Add Match Form (Admin Only) -->
     <div id="add-match-section" class="hidden bg-white rounded-2xl shadow-lg p-6 mb-8">
-     <h2 class="text-2xl font-bold text-blue-900 mb-4">➕ Ajouter un Match</h2><button id="generate-all-matches-btn" class="w-full mb-4 px-6 py-3 bg-purple-600 text-white rounded-lg font-bold text-lg hover:bg-purple-700 transition-colors"> ⚡ Générer tous les matches (chaque équipe joue 3 fois) </button>
+     <h2 class="text-2xl font-bold text-blue-900 mb-4">➕ Ajouter un Match</h2><button id="generate-all-matches-btn" class="w-full mb-4 px-6 py-3 bg-purple-600 text-white rounded-lg font-bold text-lg hover:bg-purple-700 transition-colors"> ⚡ Générer tous les matches de poules </button> <button id="generate-finals-btn" class="w-full mb-4 px-6 py-3 bg-orange-600 text-white rounded-lg font-bold text-lg hover:bg-orange-700 transition-colors"> 🏆 Générer les phases finales (après les poules) </button>
      <form id="add-match-form" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div><label for="poule-select" class="block text-sm font-semibold text-gray-700 mb-2">Poule</label> <select id="poule-select" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"> <option value="">Sélectionner une poule</option> <option value="Poule A">Poule A</option> <option value="Poule B">Poule B</option> <option value="Poule C">Poule C</option> <option value="Poule D">Poule D</option> </select>
+      <div><label for="poule-select" class="block text-sm font-semibold text-gray-700 mb-2">Poule</label> <select id="poule-select" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"> <option value="">Sélectionner une poule</option> <option value="Poule A">Poule A</option> <option value="Poule B">Poule B</option> <option value="Poule C">Poule C</option> <option value="Poule D">Poule D</option> <option value="Phase Finale 1">Phase Finale 1</option> <option value="Phase Finale 2">Phase Finale 2</option> <option value="Matchs de Classement">Matchs de Classement</option> </select>
       </div>
       <div><label for="team-home" class="block text-sm font-semibold text-gray-700 mb-2">Équipe Domicile</label> <select id="team-home" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"> <option value="">Choisir l'équipe</option> </select>
       </div>
@@ -73,7 +73,7 @@
       </div>
      </form>
     </div><!-- Filter Section -->
-    <div class="bg-white rounded-2xl shadow-lg p-6 mb-8"><label for="poule-filter" class="block text-lg font-bold text-blue-900 mb-3">🔍 Sélectionner une Poule</label> <select id="poule-filter" class="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-lg font-semibold"> <option value="all">Toutes les Poules</option> <option value="Poule A">Poule A</option> <option value="Poule B">Poule B</option> <option value="Poule C">Poule C</option> <option value="Poule D">Poule D</option> </select>
+    <div class="bg-white rounded-2xl shadow-lg p-6 mb-8"><label for="poule-filter" class="block text-lg font-bold text-blue-900 mb-3">🔍 Sélectionner une Phase</label> <select id="poule-filter" class="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-lg font-semibold"> <option value="all">Toutes les Phases</option> <option value="Poule A">Poule A</option> <option value="Poule B">Poule B</option> <option value="Poule C">Poule C</option> <option value="Poule D">Poule D</option> <option value="Phase Finale 1">Phase Finale 1</option> <option value="Phase Finale 2">Phase Finale 2</option> <option value="Matchs de Classement">Matchs de Classement</option> </select>
     </div><!-- Matches List -->
     <div class="bg-white rounded-2xl shadow-lg p-6">
      <h2 class="text-2xl font-bold text-blue-900 mb-6">📋 Matches du Tournoi</h2>
@@ -139,6 +139,212 @@
       }
     }
 
+    function getPouleStandings() {
+      const pouleStandings = {};
+
+      allMatches.forEach(match => {
+        if (!match.is_finished || !match.poule.startsWith('Poule ')) return;
+
+        const poule = match.poule;
+        
+        if (!pouleStandings[poule]) {
+          pouleStandings[poule] = {};
+        }
+
+        const teams = pouleStandings[poule];
+
+        if (!teams[match.team_home]) {
+          teams[match.team_home] = { name: match.team_home, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 };
+        }
+        if (!teams[match.team_away]) {
+          teams[match.team_away] = { name: match.team_away, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 };
+        }
+
+        teams[match.team_home].played++;
+        teams[match.team_away].played++;
+        teams[match.team_home].goalsFor += match.score_home;
+        teams[match.team_home].goalsAgainst += match.score_away;
+        teams[match.team_away].goalsFor += match.score_away;
+        teams[match.team_away].goalsAgainst += match.score_home;
+
+        if (match.score_home > match.score_away) {
+          teams[match.team_home].won++;
+          teams[match.team_home].points += 3;
+          teams[match.team_away].lost++;
+        } else if (match.score_home < match.score_away) {
+          teams[match.team_away].won++;
+          teams[match.team_away].points += 3;
+          teams[match.team_home].lost++;
+        } else {
+          teams[match.team_home].drawn++;
+          teams[match.team_away].drawn++;
+          teams[match.team_home].points++;
+          teams[match.team_away].points++;
+        }
+      });
+
+      // Trier chaque poule
+      const sortedStandings = {};
+      for (const [poule, teams] of Object.entries(pouleStandings)) {
+        sortedStandings[poule] = Object.values(teams).sort((a, b) => {
+          if (b.points !== a.points) return b.points - a.points;
+          const diffA = a.goalsFor - a.goalsAgainst;
+          const diffB = b.goalsFor - b.goalsAgainst;
+          if (diffB !== diffA) return diffB - diffA;
+          return b.goalsFor - a.goalsFor;
+        });
+      }
+
+      return sortedStandings;
+    }
+
+    function handleGenerateFinalsPhase() {
+      const btn = document.getElementById('generate-finals-btn');
+      
+      // Vérifier si toutes les poules ont des classements
+      const standings = getPouleStandings();
+      
+      const missingPoules = [];
+      ['Poule A', 'Poule B', 'Poule C', 'Poule D'].forEach(poule => {
+        if (!standings[poule] || standings[poule].length < 4) {
+          missingPoules.push(poule);
+        }
+      });
+
+      if (missingPoules.length > 0) {
+        showNotification(`Les poules suivantes n'ont pas de classement complet: ${missingPoules.join(', ')}`, 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Génération en cours...';
+
+      // Récupérer les équipes classées
+      const team1A = standings['Poule A'][0].name;
+      const team2A = standings['Poule A'][1].name;
+      const team3A = standings['Poule A'][2].name;
+      const team4A = standings['Poule A'][3].name;
+
+      const team1B = standings['Poule B'][0].name;
+      const team2B = standings['Poule B'][1].name;
+      const team3B = standings['Poule B'][2].name;
+      const team4B = standings['Poule B'][3].name;
+
+      const team1C = standings['Poule C'][0].name;
+      const team2C = standings['Poule C'][1].name;
+      const team3C = standings['Poule C'][2].name;
+      const team4C = standings['Poule C'][3].name;
+
+      const team1D = standings['Poule D'][0].name;
+      const team2D = standings['Poule D'][1].name;
+      const team3D = standings['Poule D'][2].name;
+      const team4D = standings['Poule D'][3].name;
+
+      // Phase Finale 1 - 13h40 (8 matches espacés de 10min)
+      const phase1Matches = [
+        { home: team3A, away: team4C, label: 'M1', time: '13:40' },
+        { home: team3B, away: team4D, label: 'M2', time: '13:50' },
+        { home: team3C, away: team4A, label: 'M3', time: '14:00' },
+        { home: team3D, away: team4B, label: 'M4', time: '14:10' },
+        { home: team1A, away: team2C, label: 'M5', time: '14:20' },
+        { home: team1B, away: team2D, label: 'M6', time: '14:30' },
+        { home: team1C, away: team2A, label: 'M7', time: '14:40' },
+        { home: team1D, away: team2B, label: 'M8', time: '14:50' }
+      ];
+
+      phase1Matches.forEach(match => {
+        const today = new Date();
+        const [hours, minutes] = match.time.split(':');
+        today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+        const newMatch = {
+          __backendId: `${match.label}_${Date.now()}_${Math.random()}`,
+          match_id: match.label,
+          team_home: match.home,
+          team_away: match.away,
+          score_home: 0,
+          score_away: 0,
+          date: today.toISOString(),
+          is_finished: false,
+          poule: 'Phase Finale 1'
+        };
+
+        allMatches.push(newMatch);
+      });
+
+      // Phase Finale 2 - Matches dépendant des résultats (8 matches)
+      const phase2Matches = [
+        { home: 'Perdant M1', away: 'Perdant M2', label: 'M9', time: '15:00' },
+        { home: 'Vainqueur M1', away: 'Vainqueur M2', label: 'M10', time: '15:10' },
+        { home: 'Perdant M3', away: 'Perdant M4', label: 'M11', time: '15:20' },
+        { home: 'Vainqueur M3', away: 'Vainqueur M4', label: 'M12', time: '15:30' },
+        { home: 'Perdant M5', away: 'Perdant M6', label: 'M13', time: '15:40' },
+        { home: 'Perdant M7', away: 'Perdant M8', label: 'M14', time: '15:50' },
+        { home: 'Vainqueur M5', away: 'Vainqueur M6', label: 'M15', time: '16:00' },
+        { home: 'Vainqueur M7', away: 'Vainqueur M8', label: 'M16', time: '16:10' }
+      ];
+
+      phase2Matches.forEach(match => {
+        const today = new Date();
+        const [hours, minutes] = match.time.split(':');
+        today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+        const newMatch = {
+          __backendId: `${match.label}_${Date.now()}_${Math.random()}`,
+          match_id: match.label,
+          team_home: match.home,
+          team_away: match.away,
+          score_home: 0,
+          score_away: 0,
+          date: today.toISOString(),
+          is_finished: false,
+          poule: 'Phase Finale 2'
+        };
+
+        allMatches.push(newMatch);
+      });
+
+      // Matchs de Classement (8 matches)
+      const classementMatches = [
+        { home: 'Perdant M9', away: 'Perdant M11', label: 'M17 (15/16ème)', time: '16:20' },
+        { home: 'Vainqueur M9', away: 'Vainqueur M11', label: 'M18 (13/14ème)', time: '16:30' },
+        { home: 'Perdant M10', away: 'Perdant M12', label: 'M19 (11/12ème)', time: '16:40' },
+        { home: 'Vainqueur M10', away: 'Vainqueur M12', label: 'M20 (9/10ème)', time: '16:50' },
+        { home: 'Perdant M13', away: 'Perdant M14', label: 'M21 (7/8ème)', time: '17:00' },
+        { home: 'Vainqueur M13', away: 'Vainqueur M14', label: 'M22 (5/6ème)', time: '17:10' },
+        { home: 'Perdant M15', away: 'Perdant M16', label: 'M23 (3/4ème)', time: '17:20' },
+        { home: 'Vainqueur M15', away: 'Vainqueur M16', label: 'M24 (1er/2ème)', time: '17:30' }
+      ];
+
+      classementMatches.forEach(match => {
+        const today = new Date();
+        const [hours, minutes] = match.time.split(':');
+        today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+        const newMatch = {
+          __backendId: `${match.label}_${Date.now()}_${Math.random()}`,
+          match_id: match.label,
+          team_home: match.home,
+          team_away: match.away,
+          score_home: 0,
+          score_away: 0,
+          date: today.toISOString(),
+          is_finished: false,
+          poule: 'Matchs de Classement'
+        };
+
+        allMatches.push(newMatch);
+      });
+
+      saveToLocalStorage();
+      renderMatches();
+
+      btn.disabled = false;
+      btn.textContent = '🏆 Générer les phases finales (après les poules)';
+
+      showNotification(`24 matches de phases finales créés avec succès !`, 'success');
+    }
+
     function init() {
       loadFromLocalStorage();
       setupEventListeners();
@@ -150,6 +356,7 @@
       document.getElementById('add-match-form').addEventListener('submit', handleAddMatch);
       document.getElementById('poule-filter').addEventListener('change', handlePouleFilterChange);
       document.getElementById('generate-all-matches-btn').addEventListener('click', handleGenerateAllMatches);
+      document.getElementById('generate-finals-btn').addEventListener('click', handleGenerateFinalsPhase);
       
       document.getElementById('password-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
@@ -168,6 +375,19 @@
         
         if (poule && POULES[poule]) {
           POULES[poule].forEach(team => {
+            const optionHome = document.createElement('option');
+            optionHome.value = team;
+            optionHome.textContent = team;
+            teamHomeSelect.appendChild(optionHome);
+            
+            const optionAway = document.createElement('option');
+            optionAway.value = team;
+            optionAway.textContent = team;
+            teamAwaySelect.appendChild(optionAway);
+          });
+        } else if (poule) {
+          // Pour les phases finales, permettre de choisir toutes les équipes
+          Object.keys(TEAMS).forEach(team => {
             const optionHome = document.createElement('option');
             optionHome.value = team;
             optionHome.textContent = team;
@@ -250,7 +470,7 @@
       updateStandings();
 
       btn.disabled = false;
-      btn.textContent = '⚡ Générer tous les matches (chaque équipe joue 3 fois)';
+      btn.textContent = '⚡ Générer tous les matches de poules';
 
       showNotification(`${allMatchesOrdered.length} matches créés avec succès !`, 'success');
     }
@@ -343,7 +563,7 @@
         : sortedMatches.filter(match => match.poule === selectedPoule);
 
       if (filteredMatches.length === 0) {
-        container.innerHTML = '<p class="text-gray-500 text-center py-8">Aucun match pour cette poule.</p>';
+        container.innerHTML = '<p class="text-gray-500 text-center py-8">Aucun match pour cette phase.</p>';
         return;
       }
 
@@ -362,6 +582,7 @@
             <div class="flex items-center justify-between mb-4">
               <div class="flex items-center gap-3">
                 <span class="text-sm font-bold text-white bg-blue-600 px-3 py-1 rounded-lg">${match.poule}</span>
+                ${match.match_id ? `<span class="text-xs font-bold text-purple-700 bg-purple-100 px-2 py-1 rounded">${match.match_id}</span>` : ''}
                 <span class="text-sm font-semibold text-gray-600">📅 ${formattedDate}</span>
               </div>
               ${match.is_finished ? '<span class="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">TERMINÉ</span>' : '<span class="px-3 py-1 bg-yellow-500 text-white text-xs font-bold rounded-full">EN COURS</span>'}
@@ -644,48 +865,7 @@
     function updateStandings() {
       const standingsContainer = document.getElementById('standings-container');
       
-      const pouleStandings = {};
-
-      allMatches.forEach(match => {
-        if (!match.is_finished) return;
-
-        const poule = match.poule || 'Sans Poule';
-        
-        if (!pouleStandings[poule]) {
-          pouleStandings[poule] = {};
-        }
-
-        const teams = pouleStandings[poule];
-
-        if (!teams[match.team_home]) {
-          teams[match.team_home] = { name: match.team_home, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 };
-        }
-        if (!teams[match.team_away]) {
-          teams[match.team_away] = { name: match.team_away, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 };
-        }
-
-        teams[match.team_home].played++;
-        teams[match.team_away].played++;
-        teams[match.team_home].goalsFor += match.score_home;
-        teams[match.team_home].goalsAgainst += match.score_away;
-        teams[match.team_away].goalsFor += match.score_away;
-        teams[match.team_away].goalsAgainst += match.score_home;
-
-        if (match.score_home > match.score_away) {
-          teams[match.team_home].won++;
-          teams[match.team_home].points += 3;
-          teams[match.team_away].lost++;
-        } else if (match.score_home < match.score_away) {
-          teams[match.team_away].won++;
-          teams[match.team_away].points += 3;
-          teams[match.team_home].lost++;
-        } else {
-          teams[match.team_home].drawn++;
-          teams[match.team_away].drawn++;
-          teams[match.team_home].points++;
-          teams[match.team_away].points++;
-        }
-      });
+      const pouleStandings = getPouleStandings();
 
       const poulesToDisplay = selectedPoule === 'all' 
         ? Object.keys(pouleStandings).sort() 
@@ -697,13 +877,7 @@
       }
 
       standingsContainer.innerHTML = poulesToDisplay.map(poule => {
-        const standings = Object.values(pouleStandings[poule]).sort((a, b) => {
-          if (b.points !== a.points) return b.points - a.points;
-          const diffA = a.goalsFor - a.goalsAgainst;
-          const diffB = b.goalsFor - b.goalsAgainst;
-          if (diffB !== diffA) return diffB - diffA;
-          return b.goalsFor - a.goalsFor;
-        });
+        const standings = pouleStandings[poule];
 
         return `
           <div class="mb-8">
@@ -774,5 +948,5 @@
 
     init();
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b8c837730cd698e',t:'MTc2NzU0ODM0OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b8c967174f1018c',t:'MTc2NzU0OTEyNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
