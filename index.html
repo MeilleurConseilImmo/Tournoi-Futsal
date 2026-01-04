@@ -226,7 +226,7 @@
 
     function handleLogin() {
       const passwordInput = document.getElementById('password-input');
-      const password = passwordInput.value;
+      const password = passwordInput.value.trim();
       const errorMsg = document.getElementById('login-error');
 
       if (password === ADMIN_PASSWORD) {
@@ -238,7 +238,7 @@
         passwordInput.value = '';
         renderMatches();
       } else {
-        errorMsg.textContent = '❌ Mot de passe incorrect';
+        errorMsg.textContent = '❌ Mot de passe incorrect (mot de passe: chelles2024)';
         errorMsg.classList.remove('hidden');
         passwordInput.value = '';
       }
@@ -357,6 +357,7 @@
                           class="score-input border-2 border-blue-400 rounded-lg py-2 focus:outline-none focus:border-blue-600"
                           data-match-id="${match.__backendId}"
                           data-team="home"
+                          onchange="handleScoreChange(this)"
                         />
                       ` : `
                         <div class="score-input bg-blue-600 text-white rounded-lg py-2 flex items-center justify-center font-bold">${match.score_home}</div>
@@ -372,6 +373,7 @@
                           class="score-input border-2 border-green-400 rounded-lg py-2 focus:outline-none focus:border-green-600"
                           data-match-id="${match.__backendId}"
                           data-team="away"
+                          onchange="handleScoreChange(this)"
                         />
                       ` : `
                         <div class="score-input bg-green-600 text-white rounded-lg py-2 flex items-center justify-center font-bold">${match.score_away}</div>
@@ -426,6 +428,34 @@
       }
     }
 
+    async function handleScoreChange(input) {
+      const matchId = input.dataset.matchId;
+      const match = allMatches.find(m => m.__backendId === matchId);
+      if (!match) return;
+
+      const card = input.closest('.match-card');
+      const homeInput = card.querySelector('input[data-team="home"]');
+      const awayInput = card.querySelector('input[data-team="away"]');
+
+      const updatedMatch = {
+        ...match,
+        score_home: parseInt(homeInput.value) || 0,
+        score_away: parseInt(awayInput.value) || 0
+      };
+
+      input.disabled = true;
+      
+      const result = await window.dataSdk.update(updatedMatch);
+
+      input.disabled = false;
+
+      if (result.isOk) {
+        showNotification('Score modifié !', 'success');
+      } else {
+        showNotification('Erreur lors de la modification', 'error');
+      }
+    }
+
     async function handleSaveMatch(e) {
       const matchId = e.target.dataset.matchId;
       const match = allMatches.find(m => m.__backendId === matchId);
@@ -455,6 +485,8 @@
         showNotification('Erreur lors de l\'enregistrement', 'error');
       }
     }
+    
+    window.handleScoreChange = handleScoreChange;
 
     async function handleToggleFinished(e) {
       const matchId = e.target.dataset.matchId;
@@ -658,5 +690,5 @@
 
     init();
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b8c50a2d5bdc2cf',t:'MTc2NzU0NjI2Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b8c5630e625c2cf',t:'MTc2NzU0NjQ5My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
