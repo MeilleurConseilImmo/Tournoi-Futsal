@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tournoi AS Chelles U11</title>
-  <script src="/_sdk/data_sdk.js"></script>
-  <script src="/_sdk/element_sdk.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
@@ -39,6 +37,8 @@
     }
   </style>
   <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="/_sdk/element_sdk.js" type="text/javascript"></script>
  </head>
  <body class="h-full">
   <div id="app" class="w-full h-full bg-gradient-to-br from-blue-50 to-green-50 overflow-auto">
@@ -90,7 +90,7 @@
    </div>
   </div>
   <script>
-    const ADMIN_PASSWORD = 'adminaschellesfootball';
+    const ADMIN_PASSWORD = 'admin123';
     let isAdmin = false;
     let allMatches = [];
     let selectedPoule = 'all';
@@ -121,70 +121,26 @@
       'Poule D': ['Chelles 4', 'US Torcy PVM', 'RC Gonnesse', 'RC Joinville']
     };
 
-    const defaultConfig = {
-      tournament_title: 'Tournoi AS Chelles U11',
-      welcome_message: 'Bienvenue au tournoi - Suivez les résultats en direct',
-      background_color: '#eff6ff',
-      card_color: '#ffffff',
-      primary_color: '#1e40af',
-      text_color: '#1e293b',
-      accent_color: '#16a34a'
-    };
+    // Fonctions de stockage local
+    function saveToLocalStorage() {
+      localStorage.setItem('tournoi_matches', JSON.stringify(allMatches));
+    }
 
-    const dataHandler = {
-      onDataChanged(data) {
-        allMatches = data;
-        renderMatches();
-        updateStandings();
-      }
-    };
-
-    async function onConfigChange(config) {
-      const tournamentTitle = document.getElementById('tournament-title');
-      const welcomeMessage = document.getElementById('welcome-message');
-      const app = document.getElementById('app');
-
-      if (tournamentTitle) {
-        tournamentTitle.textContent = config.tournament_title || defaultConfig.tournament_title;
-      }
-      if (welcomeMessage) {
-        welcomeMessage.textContent = config.welcome_message || defaultConfig.welcome_message;
-      }
-      if (app) {
-        app.style.background = `linear-gradient(to bottom right, ${config.background_color || defaultConfig.background_color}, ${config.accent_color || defaultConfig.accent_color}30)`;
+    function loadFromLocalStorage() {
+      const saved = localStorage.getItem('tournoi_matches');
+      if (saved) {
+        try {
+          allMatches = JSON.parse(saved);
+          renderMatches();
+          updateStandings();
+        } catch (e) {
+          console.error('Erreur de chargement des données');
+        }
       }
     }
 
-    async function init() {
-      const dataResult = await window.dataSdk.init(dataHandler);
-      if (!dataResult.isOk) {
-        console.error('Erreur d\'initialisation du SDK');
-        return;
-      }
-
-      if (window.elementSdk) {
-        window.elementSdk.init({
-          defaultConfig,
-          onConfigChange,
-          mapToCapabilities: (config) => ({
-            recolorables: [
-              { get: () => config.background_color || defaultConfig.background_color, set: (v) => { config.background_color = v; window.elementSdk.setConfig({ background_color: v }); } },
-              { get: () => config.card_color || defaultConfig.card_color, set: (v) => { config.card_color = v; window.elementSdk.setConfig({ card_color: v }); } },
-              { get: () => config.primary_color || defaultConfig.primary_color, set: (v) => { config.primary_color = v; window.elementSdk.setConfig({ primary_color: v }); } },
-              { get: () => config.text_color || defaultConfig.text_color, set: (v) => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); } },
-              { get: () => config.accent_color || defaultConfig.accent_color, set: (v) => { config.accent_color = v; window.elementSdk.setConfig({ accent_color: v }); } }
-            ],
-            borderables: [],
-            fontEditable: undefined,
-            fontSizeable: undefined
-          }),
-          mapToEditPanelValues: (config) => new Map([
-            ['tournament_title', config.tournament_title || defaultConfig.tournament_title],
-            ['welcome_message', config.welcome_message || defaultConfig.welcome_message]
-          ])
-        });
-      }
-
+    function init() {
+      loadFromLocalStorage();
       setupEventListeners();
     }
 
@@ -226,17 +182,8 @@
       });
     }
 
-    async function handleGenerateAllMatches() {
+    function handleGenerateAllMatches() {
       const btn = document.getElementById('generate-all-matches-btn');
-      
-      // Vérifier combien de matches peuvent être créés
-      const totalMatchesNeeded = 24; // 4 poules × 6 matches (chaque équipe joue 3 fois)
-      const remainingSlots = 999 - allMatches.length;
-      
-      if (remainingSlots < totalMatchesNeeded) {
-        showNotification(`Impossible: seulement ${remainingSlots} emplacements disponibles sur 999`, 'error');
-        return;
-      }
 
       btn.disabled = true;
       btn.textContent = 'Génération en cours...';
@@ -260,7 +207,7 @@
 
       // Réorganiser les matches en alternance (un match de chaque poule, puis rotation)
       const allMatchesOrdered = [];
-      const maxMatchesPerPoule = 6; // Chaque poule a 6 matches
+      const maxMatchesPerPoule = 6;
       
       for (let round = 0; round < maxMatchesPerPoule; round++) {
         for (const pouleName of ['Poule A', 'Poule B', 'Poule C', 'Poule D']) {
@@ -271,8 +218,6 @@
       }
 
       // Créer les matches avec des horaires espacés de 10 minutes à partir de 9h00
-      let successCount = 0;
-      let errorCount = 0;
       const startHour = 9;
       const startMinute = 0;
 
@@ -285,8 +230,9 @@
         
         today.setHours(hours, minutes, 0, 0);
 
-        const result = await window.dataSdk.create({
-          match_id: `match_${Date.now()}_${Math.random()}`,
+        const newMatch = {
+          __backendId: `match_${Date.now()}_${i}_${Math.random()}`,
+          match_id: `match_${Date.now()}_${i}`,
           team_home: match.team_home,
           team_away: match.team_away,
           score_home: 0,
@@ -294,26 +240,19 @@
           date: today.toISOString(),
           is_finished: false,
           poule: match.poule
-        });
+        };
 
-        if (result.isOk) {
-          successCount++;
-        } else {
-          errorCount++;
-        }
-        
-        // Petit délai pour éviter les problèmes de timing
-        await new Promise(resolve => setTimeout(resolve, 100));
+        allMatches.push(newMatch);
       }
+
+      saveToLocalStorage();
+      renderMatches();
+      updateStandings();
 
       btn.disabled = false;
       btn.textContent = '⚡ Générer tous les matches (chaque équipe joue 3 fois)';
 
-      if (errorCount === 0) {
-        showNotification(`${successCount} matches créés avec succès !`, 'success');
-      } else {
-        showNotification(`${successCount} matches créés, ${errorCount} erreurs`, 'error');
-      }
+      showNotification(`${allMatchesOrdered.length} matches créés avec succès !`, 'success');
     }
 
     function handlePouleFilterChange(e) {
@@ -351,13 +290,8 @@
       renderMatches();
     }
 
-    async function handleAddMatch(e) {
+    function handleAddMatch(e) {
       e.preventDefault();
-      
-      if (allMatches.length >= 999) {
-        showNotification('Limite de 999 matches atteinte. Veuillez supprimer des matches.', 'error');
-        return;
-      }
 
       const poule = document.getElementById('poule-select').value;
       const teamHome = document.getElementById('team-home').value;
@@ -369,15 +303,12 @@
         return;
       }
 
-      const submitBtn = e.target.querySelector('button[type="submit"]');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Création...';
-
       const today = new Date();
       const [hours, minutes] = matchTime.split(':');
       today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-      const result = await window.dataSdk.create({
+      const newMatch = {
+        __backendId: `match_${Date.now()}`,
         match_id: `match_${Date.now()}`,
         team_home: teamHome,
         team_away: teamAway,
@@ -386,17 +317,15 @@
         date: today.toISOString(),
         is_finished: false,
         poule: poule
-      });
+      };
 
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Créer le Match';
-
-      if (result.isOk) {
-        e.target.reset();
-        showNotification('Match créé avec succès !', 'success');
-      } else {
-        showNotification('Erreur lors de la création du match', 'error');
-      }
+      allMatches.push(newMatch);
+      saveToLocalStorage();
+      renderMatches();
+      updateStandings();
+      
+      e.target.reset();
+      showNotification('Match créé avec succès !', 'success');
     }
 
     function renderMatches() {
@@ -409,7 +338,6 @@
 
       const sortedMatches = [...allMatches].sort((a, b) => new Date(a.date) - new Date(b.date));
       
-      // Filtrer par poule sélectionnée
       const filteredMatches = selectedPoule === 'all' 
         ? sortedMatches 
         : sortedMatches.filter(match => match.poule === selectedPoule);
@@ -573,7 +501,7 @@
       }
     }
 
-    async function handleScoreChange(input) {
+    function handleScoreChange(input) {
       const matchId = input.dataset.matchId;
       const match = allMatches.find(m => m.__backendId === matchId);
       if (!match) return;
@@ -582,26 +510,15 @@
       const homeInput = card.querySelector('input[data-team="home"]');
       const awayInput = card.querySelector('input[data-team="away"]');
 
-      const updatedMatch = {
-        ...match,
-        score_home: parseInt(homeInput.value) || 0,
-        score_away: parseInt(awayInput.value) || 0
-      };
+      match.score_home = parseInt(homeInput.value) || 0;
+      match.score_away = parseInt(awayInput.value) || 0;
 
-      input.disabled = true;
-      
-      const result = await window.dataSdk.update(updatedMatch);
-
-      input.disabled = false;
-
-      if (result.isOk) {
-        showNotification('Score modifié !', 'success');
-      } else {
-        showNotification('Erreur lors de la modification', 'error');
-      }
+      saveToLocalStorage();
+      updateStandings();
+      showNotification('Score modifié !', 'success');
     }
 
-    async function handleSaveMatch(e) {
+    function handleSaveMatch(e) {
       const matchId = e.target.dataset.matchId;
       const match = allMatches.find(m => m.__backendId === matchId);
       if (!match) return;
@@ -610,56 +527,35 @@
       const homeInput = card.querySelector('input[data-team="home"]');
       const awayInput = card.querySelector('input[data-team="away"]');
 
-      const updatedMatch = {
-        ...match,
-        score_home: parseInt(homeInput.value) || 0,
-        score_away: parseInt(awayInput.value) || 0
-      };
+      match.score_home = parseInt(homeInput.value) || 0;
+      match.score_away = parseInt(awayInput.value) || 0;
 
-      e.target.disabled = true;
-      e.target.textContent = 'Enregistrement...';
-
-      const result = await window.dataSdk.update(updatedMatch);
-
-      e.target.disabled = false;
-      e.target.textContent = '💾 Enregistrer les Scores';
-
-      if (result.isOk) {
-        showNotification('Scores enregistrés !', 'success');
-      } else {
-        showNotification('Erreur lors de l\'enregistrement', 'error');
-      }
+      saveToLocalStorage();
+      updateStandings();
+      
+      showNotification('Scores enregistrés !', 'success');
     }
     
     window.handleScoreChange = handleScoreChange;
 
-    async function handleToggleFinished(e) {
+    function handleToggleFinished(e) {
       const matchId = e.target.dataset.matchId;
       const match = allMatches.find(m => m.__backendId === matchId);
       if (!match) return;
 
-      const updatedMatch = {
-        ...match,
-        is_finished: !match.is_finished
-      };
+      match.is_finished = !match.is_finished;
 
-      e.target.disabled = true;
-
-      const result = await window.dataSdk.update(updatedMatch);
-
-      e.target.disabled = false;
-
-      if (result.isOk) {
-        showNotification(updatedMatch.is_finished ? 'Match terminé' : 'Match rouvert', 'success');
-      } else {
-        showNotification('Erreur lors de la mise à jour', 'error');
-      }
+      saveToLocalStorage();
+      renderMatches();
+      updateStandings();
+      
+      showNotification(match.is_finished ? 'Match terminé' : 'Match rouvert', 'success');
     }
 
-    async function handleDeleteMatch(e) {
+    function handleDeleteMatch(e) {
       const matchId = e.target.dataset.matchId;
-      const match = allMatches.find(m => m.__backendId === matchId);
-      if (!match) return;
+      const matchIndex = allMatches.findIndex(m => m.__backendId === matchId);
+      if (matchIndex === -1) return;
 
       const card = e.target.closest('.match-card');
       const originalHTML = e.target.innerHTML;
@@ -668,21 +564,12 @@
       e.target.classList.remove('bg-red-600', 'hover:bg-red-700');
       e.target.classList.add('bg-orange-600', 'hover:bg-orange-700');
       
-      const confirmDelete = async () => {
-        e.target.disabled = true;
-        e.target.textContent = 'Suppression...';
-        
-        const result = await window.dataSdk.delete(match);
-        
-        if (result.isOk) {
-          showNotification('Match supprimé', 'success');
-        } else {
-          showNotification('Erreur lors de la suppression', 'error');
-          e.target.disabled = false;
-          e.target.innerHTML = originalHTML;
-          e.target.classList.remove('bg-orange-600', 'hover:bg-orange-700');
-          e.target.classList.add('bg-red-600', 'hover:bg-red-700');
-        }
+      const confirmDelete = () => {
+        allMatches.splice(matchIndex, 1);
+        saveToLocalStorage();
+        renderMatches();
+        updateStandings();
+        showNotification('Match supprimé', 'success');
         e.target.removeEventListener('click', confirmDelete);
       };
       
@@ -726,7 +613,7 @@
       }
     }
 
-    async function handleSaveTeams(e) {
+    function handleSaveTeams(e) {
       const matchId = e.target.dataset.matchId;
       const match = allMatches.find(m => m.__backendId === matchId);
       if (!match) return;
@@ -744,26 +631,14 @@
         return;
       }
 
-      const updatedMatch = {
-        ...match,
-        team_home: newTeamHome,
-        team_away: newTeamAway
-      };
+      match.team_home = newTeamHome;
+      match.team_away = newTeamAway;
 
-      e.target.disabled = true;
-      e.target.textContent = 'Enregistrement...';
-
-      const result = await window.dataSdk.update(updatedMatch);
-
-      e.target.disabled = false;
-      e.target.textContent = '✅ Enregistrer les Modifications';
-
-      if (result.isOk) {
-        showNotification('Équipes modifiées avec succès !', 'success');
-        editForm.classList.add('hidden');
-      } else {
-        showNotification('Erreur lors de la modification', 'error');
-      }
+      saveToLocalStorage();
+      renderMatches();
+      
+      showNotification('Équipes modifiées avec succès !', 'success');
+      editForm.classList.add('hidden');
     }
 
     function updateStandings() {
@@ -812,7 +687,6 @@
         }
       });
 
-      // Filtrer par poule sélectionnée
       const poulesToDisplay = selectedPoule === 'all' 
         ? Object.keys(pouleStandings).sort() 
         : (pouleStandings[selectedPoule] ? [selectedPoule] : []);
@@ -900,5 +774,5 @@
 
     init();
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b8c783b94b3c2cf',t:'MTc2NzU0Nzg4OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b8c837730cd698e',t:'MTc2NzU0ODM0OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
