@@ -59,7 +59,7 @@
      </div>
     </div><!-- Add Match Form (Admin Only) -->
     <div id="add-match-section" class="hidden bg-white rounded-2xl shadow-lg p-6 mb-8">
-     <h2 class="text-2xl font-bold text-blue-900 mb-4">➕ Ajouter un Match</h2><button id="generate-all-matches-btn" class="w-full mb-4 px-6 py-3 bg-purple-600 text-white rounded-lg font-bold text-lg hover:bg-purple-700 transition-colors"> ⚡ Générer tous les matches de poules </button> <button id="generate-finals-btn" class="w-full mb-4 px-6 py-3 bg-orange-600 text-white rounded-lg font-bold text-lg hover:bg-orange-700 transition-colors"> 🏆 Générer les phases finales (après les poules) </button>
+     <h2 class="text-2xl font-bold text-blue-900 mb-4">➕ Ajouter un Match</h2><button id="generate-all-matches-btn" class="w-full mb-4 px-6 py-3 bg-purple-600 text-white rounded-lg font-bold text-lg hover:bg-purple-700 transition-colors"> ⚡ Générer tous les matches de poules (Planning optimisé 9h00-13h30) </button> <button id="generate-finals-btn" class="w-full mb-4 px-6 py-3 bg-orange-600 text-white rounded-lg font-bold text-lg hover:bg-orange-700 transition-colors"> 🏆 Générer les phases finales (après les poules) </button>
      <form id="add-match-form" class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div><label for="poule-select" class="block text-sm font-semibold text-gray-700 mb-2">Poule</label> <select id="poule-select" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"> <option value="">Sélectionner une poule</option> <option value="Poule A">Poule A</option> <option value="Poule B">Poule B</option> <option value="Poule C">Poule C</option> <option value="Poule D">Poule D</option> <option value="Phase Finale 1">Phase Finale 1</option> <option value="Phase Finale 2">Phase Finale 2</option> <option value="Matchs de Classement">Matchs de Classement</option> </select>
       </div>
@@ -73,7 +73,7 @@
       </div>
      </form>
     </div><!-- Filter Section -->
-    <div class="bg-white rounded-2xl shadow-lg p-6 mb-8"><label for="poule-filter" class="block text-lg font-bold text-blue-900 mb-3">🔍 Sélectionner une Phase</label> <select id="poule-filter" class="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-lg font-semibold"> <option value="all">Toutes les Phases</option> <option value="Poule A">Poule A</option> <option value="Poule B">Poule B</option> <option value="Poule C">Poule C</option> <option value="Poule D">Poule D</option> <option value="Phase Finale 1">Phase Finale 1</option> <option value="Phase Finale 2">Phase Finale 2</option> <option value="Matchs de Classement">Matchs de Classement</option> </select>
+    <div class="bg-white rounded-2xl shadow-lg p-6 mb-8"><label for="poule-filter" class="block text-lg font-bold text-blue-900 mb-3">🔍 Sélectionner une Phase</label> <select id="poule-filter" class="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 text-lg font-semibold"> <option value="all">📋 Choisir une phase...</option> <option value="Poule A">Poule A</option> <option value="Poule B">Poule B</option> <option value="Poule C">Poule C</option> <option value="Poule D">Poule D</option> <option value="Phase Finale 1">Phase Finale 1</option> <option value="Phase Finale 2">Phase Finale 2</option> <option value="Matchs de Classement">Matchs de Classement</option> </select>
     </div><!-- Matches List -->
     <div class="bg-white rounded-2xl shadow-lg p-6">
      <h2 class="text-2xl font-bold text-blue-900 mb-6">📋 Matches du Tournoi</h2>
@@ -94,6 +94,7 @@
     let isAdmin = false;
     let allMatches = [];
     let selectedPoule = 'all';
+    let tournamentFinalized = false;
     
     const TEAMS = {
       'Chelles 1': 'https://raw.githubusercontent.com/Vivien77500/Pr-senceU11/main/logo__sae7hi.png',
@@ -124,6 +125,7 @@
     // Fonctions de stockage local
     function saveToLocalStorage() {
       localStorage.setItem('tournoi_matches', JSON.stringify(allMatches));
+      localStorage.setItem('tournoi_finalized', JSON.stringify(tournamentFinalized));
     }
 
     function loadFromLocalStorage() {
@@ -135,6 +137,15 @@
           updateStandings();
         } catch (e) {
           console.error('Erreur de chargement des données');
+        }
+      }
+      
+      const savedFinalized = localStorage.getItem('tournoi_finalized');
+      if (savedFinalized) {
+        try {
+          tournamentFinalized = JSON.parse(savedFinalized);
+        } catch (e) {
+          tournamentFinalized = false;
         }
       }
     }
@@ -274,14 +285,14 @@
 
       // Phase Finale 2 - Matches dépendant des résultats (8 matches)
       const phase2Matches = [
-        { home: 'Perdant M1', away: 'Perdant M2', label: 'M9', time: '15:00' },
-        { home: 'Vainqueur M1', away: 'Vainqueur M2', label: 'M10', time: '15:10' },
-        { home: 'Perdant M3', away: 'Perdant M4', label: 'M11', time: '15:20' },
-        { home: 'Vainqueur M3', away: 'Vainqueur M4', label: 'M12', time: '15:30' },
-        { home: 'Perdant M5', away: 'Perdant M6', label: 'M13', time: '15:40' },
-        { home: 'Perdant M7', away: 'Perdant M8', label: 'M14', time: '15:50' },
-        { home: 'Vainqueur M5', away: 'Vainqueur M6', label: 'M15', time: '16:00' },
-        { home: 'Vainqueur M7', away: 'Vainqueur M8', label: 'M16', time: '16:10' }
+        { home: 'Perdant M1', away: 'Perdant M2', label: 'M9', description: 'Perdants M1-M2', time: '15:00' },
+        { home: 'Vainqueur M1', away: 'Vainqueur M2', label: 'M10', description: 'Vainqueurs M1-M2', time: '15:10' },
+        { home: 'Perdant M3', away: 'Perdant M4', label: 'M11', description: 'Perdants M3-M4', time: '15:20' },
+        { home: 'Vainqueur M3', away: 'Vainqueur M4', label: 'M12', description: 'Vainqueurs M3-M4', time: '15:30' },
+        { home: 'Perdant M5', away: 'Perdant M6', label: 'M13', description: 'Perdants M5-M6', time: '15:40' },
+        { home: 'Perdant M7', away: 'Perdant M8', label: 'M14', description: 'Perdants M7-M8', time: '15:50' },
+        { home: 'Vainqueur M5', away: 'Vainqueur M6', label: 'M15', description: 'Vainqueurs M5-M6', time: '16:00' },
+        { home: 'Vainqueur M7', away: 'Vainqueur M8', label: 'M16', description: 'Vainqueurs M7-M8', time: '16:10' }
       ];
 
       phase2Matches.forEach(match => {
@@ -292,6 +303,7 @@
         const newMatch = {
           __backendId: `${match.label}_${Date.now()}_${Math.random()}`,
           match_id: match.label,
+          match_description: match.description,
           team_home: match.home,
           team_away: match.away,
           score_home: 0,
@@ -304,16 +316,16 @@
         allMatches.push(newMatch);
       });
 
-      // Matchs de Classement (8 matches)
+      // Matchs de Classement (8 matches) - avec résolution automatique des équipes
       const classementMatches = [
-        { home: 'Perdant M9', away: 'Perdant M11', label: 'M17 (15/16ème)', time: '16:20' },
-        { home: 'Vainqueur M9', away: 'Vainqueur M11', label: 'M18 (13/14ème)', time: '16:30' },
-        { home: 'Perdant M10', away: 'Perdant M12', label: 'M19 (11/12ème)', time: '16:40' },
-        { home: 'Vainqueur M10', away: 'Vainqueur M12', label: 'M20 (9/10ème)', time: '16:50' },
-        { home: 'Perdant M13', away: 'Perdant M14', label: 'M21 (7/8ème)', time: '17:00' },
-        { home: 'Vainqueur M13', away: 'Vainqueur M14', label: 'M22 (5/6ème)', time: '17:10' },
-        { home: 'Perdant M15', away: 'Perdant M16', label: 'M23 (3/4ème)', time: '17:20' },
-        { home: 'Vainqueur M15', away: 'Vainqueur M16', label: 'M24 (1er/2ème)', time: '17:30' }
+        { home: 'Perdant M9', away: 'Perdant M11', label: 'M17', description: '15/16ème place', time: '16:20' },
+        { home: 'Vainqueur M9', away: 'Vainqueur M11', label: 'M18', description: '13/14ème place', time: '16:30' },
+        { home: 'Perdant M10', away: 'Perdant M12', label: 'M19', description: '11/12ème place', time: '16:40' },
+        { home: 'Vainqueur M10', away: 'Vainqueur M12', label: 'M20', description: '9/10ème place', time: '16:50' },
+        { home: 'Perdant M13', away: 'Perdant M14', label: 'M21', description: '7/8ème place', time: '17:00' },
+        { home: 'Vainqueur M13', away: 'Vainqueur M14', label: 'M22', description: '5/6ème place', time: '17:10' },
+        { home: 'Perdant M15', away: 'Perdant M16', label: 'M23', description: '3/4ème place', time: '17:20' },
+        { home: 'Vainqueur M15', away: 'Vainqueur M16', label: 'M24', description: 'FINALE 1ère/2ème place', time: '17:30' }
       ];
 
       classementMatches.forEach(match => {
@@ -324,6 +336,7 @@
         const newMatch = {
           __backendId: `${match.label}_${Date.now()}_${Math.random()}`,
           match_id: match.label,
+          match_description: match.description,
           team_home: match.home,
           team_away: match.away,
           score_home: 0,
@@ -408,71 +421,70 @@
       btn.disabled = true;
       btn.textContent = 'Génération en cours...';
 
-      // Générer tous les matches de chaque poule
-      const pouleMatches = {};
-      for (const [pouleName, teams] of Object.entries(POULES)) {
-        pouleMatches[pouleName] = [];
+      // Planning optimisé sur 4h30 (9h00 - 13h30)
+      // Repos équilibré : min 40min, max 2h
+      const matchSchedule = [
+        // 9h00 - 10h10 (7 matches)
+        { time: '09:00', poule: 'Poule A', home: 'Chelles 1', away: 'Claye Souilly Sports' },
+        { time: '09:10', poule: 'Poule B', home: 'Chelles 2', away: 'FC Gagny' },
+        { time: '09:20', poule: 'Poule C', home: 'Chelles 3', away: 'US Vaires' },
+        { time: '09:30', poule: 'Poule D', home: 'Chelles 4', away: 'US Torcy PVM' },
+        { time: '09:40', poule: 'Poule A', home: 'Espérance Aulnaysienne', away: 'Entente SSG' },
+        { time: '09:50', poule: 'Poule B', home: 'Red Star FC', away: 'US Fontenay' },
+        { time: '10:00', poule: 'Poule C', home: 'Noisy le Grand FC', away: 'AS La Courneuve' },
         
-        // Générer tous les matches (chaque équipe contre chaque autre)
-        for (let i = 0; i < teams.length; i++) {
-          for (let j = i + 1; j < teams.length; j++) {
-            pouleMatches[pouleName].push({
-              team_home: teams[i],
-              team_away: teams[j],
-              poule: pouleName
-            });
-          }
-        }
-      }
+        // 10h10 - 11h20 (7 matches)
+        { time: '10:10', poule: 'Poule D', home: 'RC Gonnesse', away: 'RC Joinville' },
+        { time: '10:20', poule: 'Poule A', home: 'Claye Souilly Sports', away: 'Entente SSG' },
+        { time: '10:30', poule: 'Poule B', home: 'FC Gagny', away: 'Red Star FC' },
+        { time: '10:40', poule: 'Poule C', home: 'US Vaires', away: 'Noisy le Grand FC' },
+        { time: '10:50', poule: 'Poule D', home: 'US Torcy PVM', away: 'RC Gonnesse' },
+        { time: '11:00', poule: 'Poule A', home: 'Chelles 1', away: 'Entente SSG' },
+        { time: '11:10', poule: 'Poule B', home: 'Chelles 2', away: 'Red Star FC' },
+        
+        // 11h20 - 12h30 (7 matches)
+        { time: '11:20', poule: 'Poule C', home: 'Chelles 3', away: 'Noisy le Grand FC' },
+        { time: '11:30', poule: 'Poule D', home: 'Chelles 4', away: 'RC Joinville' },
+        { time: '11:40', poule: 'Poule A', home: 'Espérance Aulnaysienne', away: 'Claye Souilly Sports' },
+        { time: '11:50', poule: 'Poule B', home: 'FC Gagny', away: 'US Fontenay' },
+        { time: '12:00', poule: 'Poule C', home: 'US Vaires', away: 'AS La Courneuve' },
+        { time: '12:10', poule: 'Poule D', home: 'US Torcy PVM', away: 'RC Joinville' },
+        { time: '12:20', poule: 'Poule A', home: 'Chelles 1', away: 'Espérance Aulnaysienne' },
+        
+        // 12h30 - 13h30 (3 matches)
+        { time: '12:30', poule: 'Poule B', home: 'Chelles 2', away: 'US Fontenay' },
+        { time: '12:40', poule: 'Poule C', home: 'Chelles 3', away: 'AS La Courneuve' },
+        { time: '12:50', poule: 'Poule D', home: 'Chelles 4', away: 'RC Gonnesse' }
+      ];
 
-      // Réorganiser les matches en alternance (un match de chaque poule, puis rotation)
-      const allMatchesOrdered = [];
-      const maxMatchesPerPoule = 6;
-      
-      for (let round = 0; round < maxMatchesPerPoule; round++) {
-        for (const pouleName of ['Poule A', 'Poule B', 'Poule C', 'Poule D']) {
-          if (pouleMatches[pouleName][round]) {
-            allMatchesOrdered.push(pouleMatches[pouleName][round]);
-          }
-        }
-      }
-
-      // Créer les matches avec des horaires espacés de 10 minutes à partir de 9h00
-      const startHour = 9;
-      const startMinute = 0;
-
-      for (let i = 0; i < allMatchesOrdered.length; i++) {
-        const match = allMatchesOrdered[i];
+      matchSchedule.forEach((matchDef, i) => {
         const today = new Date();
-        const totalMinutes = startMinute + (i * 10);
-        const hours = startHour + Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-        
-        today.setHours(hours, minutes, 0, 0);
+        const [hours, minutes] = matchDef.time.split(':');
+        today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
         const newMatch = {
           __backendId: `match_${Date.now()}_${i}_${Math.random()}`,
           match_id: `match_${Date.now()}_${i}`,
-          team_home: match.team_home,
-          team_away: match.team_away,
+          team_home: matchDef.home,
+          team_away: matchDef.away,
           score_home: 0,
           score_away: 0,
           date: today.toISOString(),
           is_finished: false,
-          poule: match.poule
+          poule: matchDef.poule
         };
 
         allMatches.push(newMatch);
-      }
+      });
 
       saveToLocalStorage();
       renderMatches();
       updateStandings();
 
       btn.disabled = false;
-      btn.textContent = '⚡ Générer tous les matches de poules';
+      btn.textContent = '⚡ Générer tous les matches de poules (Planning optimisé 9h00-13h30)';
 
-      showNotification(`${allMatchesOrdered.length} matches créés avec succès !`, 'success');
+      showNotification(`${matchSchedule.length} matches créés avec succès ! Planning optimisé 9h00-13h30`, 'success');
     }
 
     function handlePouleFilterChange(e) {
@@ -548,6 +560,54 @@
       showNotification('Match créé avec succès !', 'success');
     }
 
+    function resolveTeamName(teamLabel, depth = 0) {
+      // Protection contre la récursion infinie
+      if (depth > 10) return teamLabel;
+      
+      // Si c'est déjà un nom d'équipe, le retourner
+      if (TEAMS[teamLabel]) {
+        return teamLabel;
+      }
+
+      // Si c'est un label comme "Vainqueur M1" ou "Perdant M2"
+      const matchRef = teamLabel.match(/(Vainqueur|Perdant) M(\d+)/);
+      if (!matchRef) return teamLabel;
+
+      const isWinner = matchRef[1] === 'Vainqueur';
+      const matchNum = matchRef[2];
+
+      // Trouver le match référencé
+      const referencedMatch = allMatches.find(m => m.match_id === `M${matchNum}`);
+      
+      if (!referencedMatch || !referencedMatch.is_finished) {
+        return teamLabel; // Match pas encore joué
+      }
+
+      let teamName;
+      
+      // Vérifier d'abord s'il y a un départage en cas d'égalité
+      if (referencedMatch.score_home === referencedMatch.score_away) {
+        if (referencedMatch.tiebreaker_winner === 'home') {
+          teamName = isWinner ? referencedMatch.team_home : referencedMatch.team_away;
+        } else if (referencedMatch.tiebreaker_winner === 'away') {
+          teamName = isWinner ? referencedMatch.team_away : referencedMatch.team_home;
+        } else {
+          // Pas de départage défini, retourner le label
+          return teamLabel;
+        }
+      } else {
+        // Déterminer le vainqueur ou perdant par le score
+        if (referencedMatch.score_home > referencedMatch.score_away) {
+          teamName = isWinner ? referencedMatch.team_home : referencedMatch.team_away;
+        } else {
+          teamName = isWinner ? referencedMatch.team_away : referencedMatch.team_home;
+        }
+      }
+      
+      // Résoudre récursivement si le nom est encore un label
+      return resolveTeamName(teamName, depth + 1);
+    }
+
     function renderMatches() {
       const container = document.getElementById('matches-container');
       
@@ -574,36 +634,64 @@
           minute: '2-digit' 
         });
         
-        const logoHome = TEAMS[match.team_home] || '';
-        const logoAway = TEAMS[match.team_away] || '';
+        // Résoudre les noms d'équipes
+        const resolvedTeamHome = resolveTeamName(match.team_home);
+        const resolvedTeamAway = resolveTeamName(match.team_away);
+        
+        const logoHome = TEAMS[resolvedTeamHome] || '';
+        const logoAway = TEAMS[resolvedTeamAway] || '';
+        
+        // Afficher la description du match si elle existe
+        const matchDescription = match.match_description ? `<span class="text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-1 rounded">${match.match_description}</span>` : '';
 
         return `
           <div class="match-card bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-6 border-2 border-gray-200" data-match-id="${match.__backendId}">
             <div class="flex items-center justify-between mb-4">
               <div class="flex items-center gap-3">
                 <span class="text-sm font-bold text-white bg-blue-600 px-3 py-1 rounded-lg">${match.poule}</span>
-                ${match.match_id ? `<span class="text-xs font-bold text-purple-700 bg-purple-100 px-2 py-1 rounded">${match.match_id}</span>` : ''}
+                ${match.match_id && !match.match_id.startsWith('match_') ? `<span class="text-xs font-bold text-purple-700 bg-purple-100 px-2 py-1 rounded">${match.match_id}</span>` : ''}
+                ${matchDescription}
                 <span class="text-sm font-semibold text-gray-600">📅 ${formattedDate}</span>
               </div>
               ${match.is_finished ? '<span class="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">TERMINÉ</span>' : '<span class="px-3 py-1 bg-yellow-500 text-white text-xs font-bold rounded-full">EN COURS</span>'}
             </div>
             
             <div class="flex items-center justify-between gap-4">
-              <div class="flex-1 text-right flex items-center justify-end gap-3">
-                <h3 class="text-xl font-bold text-gray-800">${match.team_home}</h3>
-                ${logoHome ? `<img src="${logoHome}" alt="${match.team_home}" class="w-12 h-12 object-contain" onerror="this.style.display='none';" />` : ''}
+              <div class="flex-1 text-right flex flex-col items-end gap-2">
+                <div class="flex items-center justify-end gap-3">
+                  ${isAdmin && match.score_home === match.score_away && match.score_home > 0 ? `
+                    <div class="flex items-center gap-2 bg-yellow-100 px-2 py-1 rounded">
+                      <input 
+                        type="checkbox" 
+                        id="tiebreaker-home-${match.__backendId}"
+                        class="w-5 h-5 cursor-pointer tiebreaker-checkbox"
+                        data-match-id="${match.__backendId}"
+                        data-team="home"
+                        ${match.tiebreaker_winner === 'home' ? 'checked' : ''}
+                        onchange="handleTiebreakerChange(this)"
+                      />
+                      <label for="tiebreaker-home-${match.__backendId}" class="text-xs font-bold text-yellow-800 cursor-pointer">Vainqueur départage</label>
+                    </div>
+                  ` : ''}
+                  <h3 class="text-xl font-bold text-gray-800">${resolvedTeamHome}</h3>
+                  ${logoHome ? `<img src="${logoHome}" alt="${resolvedTeamHome}" class="w-12 h-12 object-contain" onerror="this.style.display='none';" />` : ''}
+                </div>
               </div>
               
               <div class="flex items-center gap-4">
                 ${isAdmin ? `
                   <input 
-                    type="number" 
-                    min="0" 
+                    type="text" 
+                    inputmode="numeric"
+                    pattern="[0-9]*"
                     value="${match.score_home}" 
                     class="score-input border-2 border-blue-400 rounded-lg py-2 focus:outline-none focus:border-blue-600"
                     data-match-id="${match.__backendId}"
                     data-team="home"
                     onchange="handleScoreChange(this)"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                    onfocus="this.select()"
+                    onkeypress="handleScoreKeypress(event, this)"
                   />
                 ` : `
                   <div class="score-input bg-blue-600 text-white rounded-lg py-2 flex items-center justify-center font-bold">${match.score_home}</div>
@@ -613,22 +701,42 @@
                 
                 ${isAdmin ? `
                   <input 
-                    type="number" 
-                    min="0" 
+                    type="text" 
+                    inputmode="numeric"
+                    pattern="[0-9]*"
                     value="${match.score_away}" 
                     class="score-input border-2 border-green-400 rounded-lg py-2 focus:outline-none focus:border-green-600"
                     data-match-id="${match.__backendId}"
                     data-team="away"
                     onchange="handleScoreChange(this)"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                    onfocus="this.select()"
+                    onkeypress="handleScoreKeypress(event, this)"
                   />
                 ` : `
                   <div class="score-input bg-green-600 text-white rounded-lg py-2 flex items-center justify-center font-bold">${match.score_away}</div>
                 `}
               </div>
               
-              <div class="flex-1 flex items-center gap-3">
-                ${logoAway ? `<img src="${logoAway}" alt="${match.team_away}" class="w-12 h-12 object-contain" onerror="this.style.display='none';" />` : ''}
-                <h3 class="text-xl font-bold text-gray-800">${match.team_away}</h3>
+              <div class="flex-1 flex flex-col items-start gap-2">
+                <div class="flex items-center gap-3">
+                  ${logoAway ? `<img src="${logoAway}" alt="${resolvedTeamAway}" class="w-12 h-12 object-contain" onerror="this.style.display='none';" />` : ''}
+                  <h3 class="text-xl font-bold text-gray-800">${resolvedTeamAway}</h3>
+                  ${isAdmin && match.score_home === match.score_away && match.score_home > 0 ? `
+                    <div class="flex items-center gap-2 bg-yellow-100 px-2 py-1 rounded">
+                      <input 
+                        type="checkbox" 
+                        id="tiebreaker-away-${match.__backendId}"
+                        class="w-5 h-5 cursor-pointer tiebreaker-checkbox"
+                        data-match-id="${match.__backendId}"
+                        data-team="away"
+                        ${match.tiebreaker_winner === 'away' ? 'checked' : ''}
+                        onchange="handleTiebreakerChange(this)"
+                      />
+                      <label for="tiebreaker-away-${match.__backendId}" class="text-xs font-bold text-yellow-800 cursor-pointer">Vainqueur départage</label>
+                    </div>
+                  ` : ''}
+                </div>
               </div>
             </div>
             
@@ -735,9 +843,70 @@
       match.score_away = parseInt(awayInput.value) || 0;
 
       saveToLocalStorage();
+      renderMatches();
       updateStandings();
       showNotification('Score modifié !', 'success');
     }
+
+    function handleTiebreakerChange(checkbox) {
+      const matchId = checkbox.dataset.matchId;
+      const team = checkbox.dataset.team;
+      const match = allMatches.find(m => m.__backendId === matchId);
+      if (!match) return;
+
+      // Décocher l'autre case
+      const card = checkbox.closest('.match-card');
+      const otherTeam = team === 'home' ? 'away' : 'home';
+      const otherCheckbox = card.querySelector(`.tiebreaker-checkbox[data-team="${otherTeam}"]`);
+      
+      if (checkbox.checked) {
+        match.tiebreaker_winner = team;
+        if (otherCheckbox) {
+          otherCheckbox.checked = false;
+        }
+      } else {
+        match.tiebreaker_winner = null;
+      }
+
+      saveToLocalStorage();
+      renderMatches();
+      updateStandings();
+      showNotification('Vainqueur du départage enregistré !', 'success');
+    }
+
+    window.handleTiebreakerChange = handleTiebreakerChange;
+
+    function handleScoreKeypress(event, input) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        
+        const matchId = input.dataset.matchId;
+        const match = allMatches.find(m => m.__backendId === matchId);
+        if (!match) return;
+
+        const card = input.closest('.match-card');
+        const homeInput = card.querySelector('input[data-team="home"]');
+        const awayInput = card.querySelector('input[data-team="away"]');
+
+        // Sauvegarder les scores
+        match.score_home = parseInt(homeInput.value) || 0;
+        match.score_away = parseInt(awayInput.value) || 0;
+        
+        // Terminer le match
+        match.is_finished = true;
+
+        saveToLocalStorage();
+        renderMatches();
+        updateStandings();
+        
+        showNotification('Match terminé et scores enregistrés ! ✅', 'success');
+        
+        // Retirer le focus de l'input
+        input.blur();
+      }
+    }
+    
+    window.handleScoreKeypress = handleScoreKeypress;
 
     function handleSaveMatch(e) {
       const matchId = e.target.dataset.matchId;
@@ -758,6 +927,7 @@
     }
     
     window.handleScoreChange = handleScoreChange;
+    window.handleScoreKeypress = handleScoreKeypress;
 
     function handleToggleFinished(e) {
       const matchId = e.target.dataset.matchId;
@@ -862,21 +1032,183 @@
       editForm.classList.add('hidden');
     }
 
+    function getFinalStandings() {
+      // Récupérer tous les matches de classement terminés
+      const classementMatches = allMatches.filter(m => 
+        m.poule === 'Matchs de Classement' && m.is_finished
+      );
+
+      const finalRankings = {};
+
+      classementMatches.forEach(match => {
+        let homeTeam = resolveTeamName(match.team_home);
+        let awayTeam = resolveTeamName(match.team_away);
+        
+        // Si les équipes ne sont pas encore déterminées, ignorer ce match
+        if (!TEAMS[homeTeam] || !TEAMS[awayTeam]) return;
+
+        const description = match.match_description || '';
+        
+        // *** CORRECTION ICI - Gérer spécifiquement le cas "1ère/2ème" ***
+        let betterPlace, worsePlace;
+        
+        if (description.includes('1ère/2ème')) {
+          betterPlace = 1;
+          worsePlace = 2;
+        } else {
+          // Pour les autres formats (15/16ème, 3/4ème, etc.)
+          const placeMatch = description.match(/(\d+)\/(\d+)/);
+          if (!placeMatch) return;
+          betterPlace = parseInt(placeMatch[1]);
+          worsePlace = parseInt(placeMatch[2]);
+        }
+
+        // Déterminer le vainqueur et le perdant
+        let winner, loser;
+        
+        if (match.score_home === match.score_away) {
+          // En cas d'égalité, utiliser le départage
+          if (match.tiebreaker_winner === 'home') {
+            winner = homeTeam;
+            loser = awayTeam;
+          } else if (match.tiebreaker_winner === 'away') {
+            winner = awayTeam;
+            loser = homeTeam;
+          } else {
+            // Pas de départage, ignorer ce match
+            return;
+          }
+        } else if (match.score_home > match.score_away) {
+          winner = homeTeam;
+          loser = awayTeam;
+        } else {
+          winner = awayTeam;
+          loser = homeTeam;
+        }
+        
+        finalRankings[winner] = { place: betterPlace, team: winner };
+        finalRankings[loser] = { place: worsePlace, team: loser };
+      });
+
+      // Calculer les statistiques complètes du tournoi pour chaque équipe
+      const teamStats = {};
+      
+      allMatches.forEach(match => {
+        if (!match.is_finished) return;
+        
+        let homeTeam = resolveTeamName(match.team_home);
+        let awayTeam = resolveTeamName(match.team_away);
+        
+        if (!TEAMS[homeTeam] || !TEAMS[awayTeam]) return;
+        
+        if (!teamStats[homeTeam]) {
+          teamStats[homeTeam] = { goalsFor: 0, goalsAgainst: 0 };
+        }
+        if (!teamStats[awayTeam]) {
+          teamStats[awayTeam] = { goalsFor: 0, goalsAgainst: 0 };
+        }
+        
+        teamStats[homeTeam].goalsFor += match.score_home;
+        teamStats[homeTeam].goalsAgainst += match.score_away;
+        teamStats[awayTeam].goalsFor += match.score_away;
+        teamStats[awayTeam].goalsAgainst += match.score_home;
+      });
+      
+      // Ajouter les stats aux classements finaux
+      Object.keys(finalRankings).forEach(team => {
+        if (teamStats[team]) {
+          finalRankings[team].goalsFor = teamStats[team].goalsFor;
+          finalRankings[team].goalsAgainst = teamStats[team].goalsAgainst;
+          finalRankings[team].goalDiff = teamStats[team].goalsFor - teamStats[team].goalsAgainst;
+        }
+      });
+
+      return Object.values(finalRankings).sort((a, b) => a.place - b.place);
+    }
+
     function updateStandings() {
       const standingsContainer = document.getElementById('standings-container');
       
       const pouleStandings = getPouleStandings();
+      const finalStandings = getFinalStandings();
 
       const poulesToDisplay = selectedPoule === 'all' 
         ? Object.keys(pouleStandings).sort() 
         : (pouleStandings[selectedPoule] ? [selectedPoule] : []);
 
-      if (poulesToDisplay.length === 0) {
+      if (poulesToDisplay.length === 0 && finalStandings.length === 0) {
         standingsContainer.innerHTML = '<p class="text-gray-500 text-center py-8">Aucun résultat pour le moment</p>';
         return;
       }
 
-      standingsContainer.innerHTML = poulesToDisplay.map(poule => {
+      let html = '';
+
+      // Afficher le classement final en premier si disponible
+      if (finalStandings.length > 0 && (selectedPoule === 'all' || selectedPoule === 'Matchs de Classement')) {
+        html += `
+          <div class="mb-8">
+            <h3 class="text-2xl font-bold text-white mb-4 bg-gradient-to-r from-yellow-500 to-orange-500 px-6 py-4 rounded-lg shadow-lg">
+              🏆 CLASSEMENT FINAL DU TOURNOI 🏆
+            </h3>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead>
+                  <tr class="border-b-2 border-gray-200 bg-gray-50">
+                    <th class="text-left py-3 px-4 font-bold text-gray-700 text-base">Place</th>
+                    <th class="text-left py-3 px-4 font-bold text-gray-700 text-base">Équipe</th>
+                    <th class="text-center py-3 px-4 font-bold text-gray-700 text-base">BP</th>
+                    <th class="text-center py-3 px-4 font-bold text-gray-700 text-base">BC</th>
+                    <th class="text-center py-3 px-4 font-bold text-gray-700 text-base">Diff</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${finalStandings.map((ranking) => {
+                    const logo = TEAMS[ranking.team] || '';
+                    let positionColor = '';
+                    let medal = '';
+                    let suffix = 'ème';
+                    
+                    if (ranking.place === 1) {
+                      positionColor = 'bg-yellow-100 border-l-4 border-yellow-500';
+                      medal = '🥇';
+                      suffix = 'ère';
+                    } else if (ranking.place === 2) {
+                      positionColor = 'bg-gray-100 border-l-4 border-gray-400';
+                      medal = '🥈';
+                    } else if (ranking.place === 3) {
+                      positionColor = 'bg-orange-100 border-l-4 border-orange-500';
+                      medal = '🥉';
+                    }
+                    
+                    const goalsFor = ranking.goalsFor || 0;
+                    const goalsAgainst = ranking.goalsAgainst || 0;
+                    const goalDiff = ranking.goalDiff || 0;
+                    const diffDisplay = goalDiff > 0 ? `+${goalDiff}` : goalDiff;
+                    
+                    return `
+                      <tr class="${positionColor} border-b border-gray-100">
+                        <td class="py-4 px-4 font-bold text-gray-800 text-lg">${medal} ${ranking.place}${suffix}</td>
+                        <td class="py-4 px-4">
+                          <div class="flex items-center gap-4">
+                            <img src="${logo}" alt="${ranking.team}" class="w-16 h-16 object-contain flex-shrink-0" onerror="this.style.display='none';" />
+                            <span class="font-bold text-gray-800 text-lg">${ranking.team}</span>
+                          </div>
+                        </td>
+                        <td class="py-4 px-4 text-center font-bold text-green-700 text-base">${goalsFor}</td>
+                        <td class="py-4 px-4 text-center font-bold text-red-700 text-base">${goalsAgainst}</td>
+                        <td class="py-4 px-4 text-center font-bold text-base ${goalDiff > 0 ? 'text-green-700' : goalDiff < 0 ? 'text-red-700' : 'text-gray-600'}">${diffDisplay}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // Afficher les classements de poules
+      html += poulesToDisplay.map(poule => {
         const standings = pouleStandings[poule];
 
         return `
@@ -908,9 +1240,9 @@
                     return `
                       <tr class="${positionColor} border-b border-gray-100">
                         <td class="py-3 px-2 font-bold text-gray-800">${index + 1}</td>
-                        <td class="py-3 px-2">
-                          <div class="flex items-center gap-2">
-                            ${logo ? `<img src="${logo}" alt="${team.name}" class="w-8 h-8 object-contain" onerror="this.style.display='none';" />` : ''}
+                        <td class="py-3 px-2 min-w-[200px]">
+                          <div class="flex items-center gap-3">
+                            <img src="${logo}" alt="${team.name}" class="w-12 h-12 object-contain flex-shrink-0" onerror="this.style.display='none';" />
                             <span class="font-semibold text-gray-800 text-sm">${team.name}</span>
                           </div>
                         </td>
@@ -931,6 +1263,8 @@
           </div>
         `;
       }).join('');
+
+      standingsContainer.innerHTML = html;
     }
 
     function showNotification(message, type) {
@@ -948,5 +1282,5 @@
 
     init();
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b8c967174f1018c',t:'MTc2NzU0OTEyNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b8d8ae387c1ee96',t:'MTc2NzU1OTEzOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
