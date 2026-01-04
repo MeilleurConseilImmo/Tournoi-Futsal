@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="fr" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tournoi AS Chelles U11</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .match-card {
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .match-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    }
+    
+    .score-input {
+      width: 60px;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .admin-badge {
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="h-full">
+  <div id="app" class="w-full h-full bg-gradient-to-br from-blue-50 to-green-50 overflow-auto">
+   <div class="max-w-6xl mx-auto px-4 py-8"><!-- Header -->
+    <div class="bg-white rounded-2xl shadow-lg p-8 mb-8">
+     <div class="flex items-center justify-between mb-4">
+      <div>
+       <h1 id="tournament-title" class="text-4xl font-bold text-blue-900 mb-2">Tournoi AS Chelles U11</h1>
+       <p id="welcome-message" class="text-lg text-gray-600">Bienvenue au tournoi - Suivez les résultats en direct</p>
+      </div>
+      <div class="text-6xl">
+       ⚽
+      </div>
+     </div><!-- Admin Login -->
+     <div id="admin-section" class="mt-6 pt-6 border-t border-gray-200">
+      <div id="login-form" class="flex gap-3 items-center"><label for="password-input" class="font-semibold text-gray-700">Mode Admin:</label> <input type="password" id="password-input" placeholder="Mot de passe" class="px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"> <button id="login-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"> Se connecter </button>
+      </div>
+      <div id="admin-status" class="hidden mt-2"><span class="admin-badge inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg font-semibold"> 🔓 Mode Admin Actif </span> <button id="logout-btn" class="ml-3 px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors"> Se déconnecter </button>
+      </div>
+      <p id="login-error" class="hidden mt-2 text-red-600 font-semibold"></p>
+     </div>
+    </div><!-- Add Match Form (Admin Only) -->
+    <div id="add-match-section" class="hidden bg-white rounded-2xl shadow-lg p-6 mb-8">
+     <h2 class="text-2xl font-bold text-blue-900 mb-4">➕ Ajouter un Match</h2>
+     <form id="add-match-form" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div><label for="poule-select" class="block text-sm font-semibold text-gray-700 mb-2">Poule</label> <select id="poule-select" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"> <option value="">Sélectionner une poule</option> <option value="Poule A">Poule A</option> <option value="Poule B">Poule B</option> <option value="Poule C">Poule C</option> <option value="Poule D">Poule D</option> </select>
+      </div>
+      <div><label for="team-home" class="block text-sm font-semibold text-gray-700 mb-2">Équipe Domicile</label> <select id="team-home" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"> <option value="">Choisir l'équipe</option> </select>
+      </div>
+      <div><label for="team-away" class="block text-sm font-semibold text-gray-700 mb-2">Équipe Extérieur</label> <select id="team-away" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"> <option value="">Choisir l'équipe</option> </select>
+      </div>
+      <div><label for="match-date" class="block text-sm font-semibold text-gray-700 mb-2">Date du Match</label> <input type="datetime-local" id="match-date" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+      </div>
+      <div class="md:col-span-4"><button type="submit" class="w-full px-6 py-3 bg-green-600 text-white rounded-lg font-bold text-lg hover:bg-green-700 transition-colors"> Créer le Match </button>
+      </div>
+     </form>
+    </div><!-- Matches List -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+     <h2 class="text-2xl font-bold text-blue-900 mb-6">📋 Matches du Tournoi</h2>
+     <div id="matches-container" class="space-y-4">
+      <p class="text-gray-500 text-center py-8">Aucun match pour le moment. Connectez-vous en mode admin pour ajouter des matches.</p>
+     </div>
+    </div><!-- Classement -->
+    <div class="bg-white rounded-2xl shadow-lg p-6 mt-8">
+     <h2 class="text-2xl font-bold text-blue-900 mb-6">🏆 Classement par Poule</h2>
+     <div id="standings-container">
+      <p class="text-gray-500 text-center py-8">Aucun résultat pour le moment</p>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    const ADMIN_PASSWORD = 'chelles2024';
+    let isAdmin = false;
+    let allMatches = [];
+    
+    const TEAMS = {
+      'Chelles 1': 'https://raw.githubusercontent.com/Vivien77500/Pr-senceU11/main/logo__sae7hi.png',
+      'Chelles 2': 'https://raw.githubusercontent.com/Vivien77500/Pr-senceU11/main/logo__sae7hi.png',
+      'Chelles 3': 'https://raw.githubusercontent.com/Vivien77500/Pr-senceU11/main/logo__sae7hi.png',
+      'Chelles 4': 'https://raw.githubusercontent.com/Vivien77500/Pr-senceU11/main/logo__sae7hi.png',
+      'US Vaires': 'https://media.scorenco.com/media/image/club-logo-1742381817.73056.png',
+      'US Torcy PVM': 'https://s3.static-footeo.com/1200/uploads/torcyfoot/logo__t1wiaz.png',
+      'Claye Souilly Sports': 'https://www.claye-souilly-sportif.fr/wp-content/uploads/2023/09/cropped-Logo-CSS-carre-1.png',
+      'FC Gagny': 'https://fc-gagny.com/cdn/shop/files/Fc_Gagny_1.png?v=1718132797',
+      'RC Gonnesse': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQxnjVyNuwPmewpkMZdI5V7o82xzdTAHYAM2g&s',
+      'AS La Courneuve': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtLe3sshM1jSmcdLZKhFkMvIqWr5lwhwd4jA&s',
+      'Red Star FC': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Logo_Red_Star_FC_2014.svg/250px-Logo_Red_Star_FC_2014.svg.png',
+      'US Fontenay': 'https://www.us-fontenay.com/app/uploads/2020/11/Football_fdBLC_Bichro-1024x885.jpg',
+      'Noisy le Grand FC': 'https://raw.githubusercontent.com/Vivien77500/Pr-senceU11/main/images.jpeg',
+      'RC Joinville': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkBEqSrirHezOL5RjgSsYyXRVcDByBdIF7nw&s',
+      'Entente SSG': 'https://upload.wikimedia.org/wikipedia/fr/e/e7/Logo_Entente_Sannois_St_Gratien.svg',
+      'Espérance Aulnaysienne': 'https://tmssl.akamaized.net/images/wappen/head/82090.png?lm=1752884799'
+    };
+    
+    const POULES = {
+      'Poule A': ['Chelles 1', 'Claye Souilly Sports', 'Espérance Aulnaysienne', 'Entente SSG'],
+      'Poule B': ['Chelles 2', 'FC Gagny', 'Red Star FC', 'US Fontenay'],
+      'Poule C': ['Chelles 3', 'US Vaires', 'Noisy le Grand FC', 'AS La Courneuve'],
+      'Poule D': ['Chelles 4', 'US Torcy PVM', 'RC Gonnesse', 'RC Joinville']
+    };
+
+    const defaultConfig = {
+      tournament_title: 'Tournoi AS Chelles U11',
+      welcome_message: 'Bienvenue au tournoi - Suivez les résultats en direct',
+      background_color: '#eff6ff',
+      card_color: '#ffffff',
+      primary_color: '#1e40af',
+      text_color: '#1e293b',
+      accent_color: '#16a34a'
+    };
+
+    const dataHandler = {
+      onDataChanged(data) {
+        allMatches = data;
+        renderMatches();
+        updateStandings();
+      }
+    };
+
+    async function onConfigChange(config) {
+      const tournamentTitle = document.getElementById('tournament-title');
+      const welcomeMessage = document.getElementById('welcome-message');
+      const app = document.getElementById('app');
+
+      if (tournamentTitle) {
+        tournamentTitle.textContent = config.tournament_title || defaultConfig.tournament_title;
+      }
+      if (welcomeMessage) {
+        welcomeMessage.textContent = config.welcome_message || defaultConfig.welcome_message;
+      }
+      if (app) {
+        app.style.background = `linear-gradient(to bottom right, ${config.background_color || defaultConfig.background_color}, ${config.accent_color || defaultConfig.accent_color}30)`;
+      }
+    }
+
+    async function init() {
+      const dataResult = await window.dataSdk.init(dataHandler);
+      if (!dataResult.isOk) {
+        console.error('Erreur d\'initialisation du SDK');
+        return;
+      }
+
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig,
+          onConfigChange,
+          mapToCapabilities: (config) => ({
+            recolorables: [
+              { get: () => config.background_color || defaultConfig.background_color, set: (v) => { config.background_color = v; window.elementSdk.setConfig({ background_color: v }); } },
+              { get: () => config.card_color || defaultConfig.card_color, set: (v) => { config.card_color = v; window.elementSdk.setConfig({ card_color: v }); } },
+              { get: () => config.primary_color || defaultConfig.primary_color, set: (v) => { config.primary_color = v; window.elementSdk.setConfig({ primary_color: v }); } },
+              { get: () => config.text_color || defaultConfig.text_color, set: (v) => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); } },
+              { get: () => config.accent_color || defaultConfig.accent_color, set: (v) => { config.accent_color = v; window.elementSdk.setConfig({ accent_color: v }); } }
+            ],
+            borderables: [],
+            fontEditable: undefined,
+            fontSizeable: undefined
+          }),
+          mapToEditPanelValues: (config) => new Map([
+            ['tournament_title', config.tournament_title || defaultConfig.tournament_title],
+            ['welcome_message', config.welcome_message || defaultConfig.welcome_message]
+          ])
+        });
+      }
+
+      setupEventListeners();
+    }
+
+    function setupEventListeners() {
+      document.getElementById('login-btn').addEventListener('click', handleLogin);
+      document.getElementById('logout-btn').addEventListener('click', handleLogout);
+      document.getElementById('add-match-form').addEventListener('submit', handleAddMatch);
+      
+      document.getElementById('password-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleLogin();
+        }
+      });
+      
+      document.getElementById('poule-select').addEventListener('change', (e) => {
+        const poule = e.target.value;
+        const teamHomeSelect = document.getElementById('team-home');
+        const teamAwaySelect = document.getElementById('team-away');
+        
+        teamHomeSelect.innerHTML = '<option value="">Choisir l\'équipe</option>';
+        teamAwaySelect.innerHTML = '<option value="">Choisir l\'équipe</option>';
+        
+        if (poule && POULES[poule]) {
+          POULES[poule].forEach(team => {
+            const optionHome = document.createElement('option');
+            optionHome.value = team;
+            optionHome.textContent = team;
+            teamHomeSelect.appendChild(optionHome);
+            
+            const optionAway = document.createElement('option');
+            optionAway.value = team;
+            optionAway.textContent = team;
+            teamAwaySelect.appendChild(optionAway);
+          });
+        }
+      });
+    }
+
+    function handleLogin() {
+      const passwordInput = document.getElementById('password-input');
+      const password = passwordInput.value;
+      const errorMsg = document.getElementById('login-error');
+
+      if (password === ADMIN_PASSWORD) {
+        isAdmin = true;
+        document.getElementById('login-form').classList.add('hidden');
+        document.getElementById('admin-status').classList.remove('hidden');
+        document.getElementById('add-match-section').classList.remove('hidden');
+        errorMsg.classList.add('hidden');
+        passwordInput.value = '';
+        renderMatches();
+      } else {
+        errorMsg.textContent = '❌ Mot de passe incorrect';
+        errorMsg.classList.remove('hidden');
+        passwordInput.value = '';
+      }
+    }
+
+    function handleLogout() {
+      isAdmin = false;
+      document.getElementById('login-form').classList.remove('hidden');
+      document.getElementById('admin-status').classList.add('hidden');
+      document.getElementById('add-match-section').classList.add('hidden');
+      document.getElementById('login-error').classList.add('hidden');
+      renderMatches();
+    }
+
+    async function handleAddMatch(e) {
+      e.preventDefault();
+      
+      if (allMatches.length >= 999) {
+        showNotification('Limite de 999 matches atteinte. Veuillez supprimer des matches.', 'error');
+        return;
+      }
+
+      const poule = document.getElementById('poule-select').value;
+      const teamHome = document.getElementById('team-home').value;
+      const teamAway = document.getElementById('team-away').value;
+      const matchDate = document.getElementById('match-date').value;
+
+      if (teamHome === teamAway) {
+        showNotification('Les deux équipes doivent être différentes', 'error');
+        return;
+      }
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Création...';
+
+      const result = await window.dataSdk.create({
+        match_id: `match_${Date.now()}`,
+        team_home: teamHome,
+        team_away: teamAway,
+        score_home: 0,
+        score_away: 0,
+        date: new Date(matchDate).toISOString(),
+        is_finished: false,
+        poule: poule
+      });
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Créer le Match';
+
+      if (result.isOk) {
+        e.target.reset();
+        showNotification('Match créé avec succès !', 'success');
+      } else {
+        showNotification('Erreur lors de la création du match', 'error');
+      }
+    }
+
+    function renderMatches() {
+      const container = document.getElementById('matches-container');
+      
+      if (allMatches.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center py-8">Aucun match pour le moment. Connectez-vous en mode admin pour ajouter des matches.</p>';
+        return;
+      }
+
+      const sortedMatches = [...allMatches].sort((a, b) => new Date(a.date) - new Date(b.date));
+      
+      const matchesByPoule = {};
+      sortedMatches.forEach(match => {
+        const poule = match.poule || 'Sans Poule';
+        if (!matchesByPoule[poule]) {
+          matchesByPoule[poule] = [];
+        }
+        matchesByPoule[poule].push(match);
+      });
+
+      container.innerHTML = Object.keys(matchesByPoule).sort().map(poule => `
+        <div class="mb-8">
+          <h3 class="text-2xl font-bold text-blue-900 mb-4 flex items-center gap-2">
+            <span class="bg-blue-600 text-white px-4 py-2 rounded-lg">${poule}</span>
+          </h3>
+          <div class="space-y-4">
+            ${matchesByPoule[poule].map(match => {
+              const matchDate = new Date(match.date);
+              const formattedDate = matchDate.toLocaleDateString('fr-FR', { 
+                weekday: 'short', 
+                day: 'numeric', 
+                month: 'short', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              });
+              
+              const logoHome = TEAMS[match.team_home] || '';
+              const logoAway = TEAMS[match.team_away] || '';
+
+              return `
+                <div class="match-card bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-6 border-2 border-gray-200" data-match-id="${match.__backendId}">
+                  <div class="flex items-center justify-between mb-4">
+                    <span class="text-sm font-semibold text-gray-600">📅 ${formattedDate}</span>
+                    ${match.is_finished ? '<span class="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">TERMINÉ</span>' : '<span class="px-3 py-1 bg-yellow-500 text-white text-xs font-bold rounded-full">EN COURS</span>'}
+                  </div>
+                  
+                  <div class="flex items-center justify-between gap-4">
+                    <div class="flex-1 text-right flex items-center justify-end gap-3">
+                      <h3 class="text-xl font-bold text-gray-800">${match.team_home}</h3>
+                      ${logoHome ? `<img src="${logoHome}" alt="${match.team_home}" class="w-12 h-12 object-contain" onerror="this.style.display='none';" />` : ''}
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                      ${isAdmin ? `
+                        <input 
+                          type="number" 
+                          min="0" 
+                          value="${match.score_home}" 
+                          class="score-input border-2 border-blue-400 rounded-lg py-2 focus:outline-none focus:border-blue-600"
+                          data-match-id="${match.__backendId}"
+                          data-team="home"
+                        />
+                      ` : `
+                        <div class="score-input bg-blue-600 text-white rounded-lg py-2 flex items-center justify-center font-bold">${match.score_home}</div>
+                      `}
+                      
+                      <span class="text-2xl font-bold text-gray-400">-</span>
+                      
+                      ${isAdmin ? `
+                        <input 
+                          type="number" 
+                          min="0" 
+                          value="${match.score_away}" 
+                          class="score-input border-2 border-green-400 rounded-lg py-2 focus:outline-none focus:border-green-600"
+                          data-match-id="${match.__backendId}"
+                          data-team="away"
+                        />
+                      ` : `
+                        <div class="score-input bg-green-600 text-white rounded-lg py-2 flex items-center justify-center font-bold">${match.score_away}</div>
+                      `}
+                    </div>
+                    
+                    <div class="flex-1 flex items-center gap-3">
+                      ${logoAway ? `<img src="${logoAway}" alt="${match.team_away}" class="w-12 h-12 object-contain" onerror="this.style.display='none';" />` : ''}
+                      <h3 class="text-xl font-bold text-gray-800">${match.team_away}</h3>
+                    </div>
+                  </div>
+                  
+                  ${isAdmin ? `
+                    <div class="mt-4 pt-4 border-t border-gray-300 flex gap-3">
+                      <button 
+                        class="save-match-btn flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                        data-match-id="${match.__backendId}"
+                      >
+                        💾 Enregistrer les Scores
+                      </button>
+                      <button 
+                        class="toggle-finished-btn px-4 py-2 ${match.is_finished ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg font-semibold transition-colors"
+                        data-match-id="${match.__backendId}"
+                      >
+                        ${match.is_finished ? '🔄 Rouvrir' : '✅ Terminer'}
+                      </button>
+                      <button 
+                        class="delete-match-btn px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                        data-match-id="${match.__backendId}"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `).join('');
+
+      if (isAdmin) {
+        document.querySelectorAll('.save-match-btn').forEach(btn => {
+          btn.addEventListener('click', handleSaveMatch);
+        });
+        document.querySelectorAll('.toggle-finished-btn').forEach(btn => {
+          btn.addEventListener('click', handleToggleFinished);
+        });
+        document.querySelectorAll('.delete-match-btn').forEach(btn => {
+          btn.addEventListener('click', handleDeleteMatch);
+        });
+      }
+    }
+
+    async function handleSaveMatch(e) {
+      const matchId = e.target.dataset.matchId;
+      const match = allMatches.find(m => m.__backendId === matchId);
+      if (!match) return;
+
+      const card = e.target.closest('.match-card');
+      const homeInput = card.querySelector('input[data-team="home"]');
+      const awayInput = card.querySelector('input[data-team="away"]');
+
+      const updatedMatch = {
+        ...match,
+        score_home: parseInt(homeInput.value) || 0,
+        score_away: parseInt(awayInput.value) || 0
+      };
+
+      e.target.disabled = true;
+      e.target.textContent = 'Enregistrement...';
+
+      const result = await window.dataSdk.update(updatedMatch);
+
+      e.target.disabled = false;
+      e.target.textContent = '💾 Enregistrer les Scores';
+
+      if (result.isOk) {
+        showNotification('Scores enregistrés !', 'success');
+      } else {
+        showNotification('Erreur lors de l\'enregistrement', 'error');
+      }
+    }
+
+    async function handleToggleFinished(e) {
+      const matchId = e.target.dataset.matchId;
+      const match = allMatches.find(m => m.__backendId === matchId);
+      if (!match) return;
+
+      const updatedMatch = {
+        ...match,
+        is_finished: !match.is_finished
+      };
+
+      e.target.disabled = true;
+
+      const result = await window.dataSdk.update(updatedMatch);
+
+      e.target.disabled = false;
+
+      if (result.isOk) {
+        showNotification(updatedMatch.is_finished ? 'Match terminé' : 'Match rouvert', 'success');
+      } else {
+        showNotification('Erreur lors de la mise à jour', 'error');
+      }
+    }
+
+    async function handleDeleteMatch(e) {
+      const matchId = e.target.dataset.matchId;
+      const match = allMatches.find(m => m.__backendId === matchId);
+      if (!match) return;
+
+      const card = e.target.closest('.match-card');
+      const originalHTML = e.target.innerHTML;
+      
+      e.target.innerHTML = 'Confirmer?';
+      e.target.classList.remove('bg-red-600', 'hover:bg-red-700');
+      e.target.classList.add('bg-orange-600', 'hover:bg-orange-700');
+      
+      const confirmDelete = async () => {
+        e.target.disabled = true;
+        e.target.textContent = 'Suppression...';
+        
+        const result = await window.dataSdk.delete(match);
+        
+        if (result.isOk) {
+          showNotification('Match supprimé', 'success');
+        } else {
+          showNotification('Erreur lors de la suppression', 'error');
+          e.target.disabled = false;
+          e.target.innerHTML = originalHTML;
+          e.target.classList.remove('bg-orange-600', 'hover:bg-orange-700');
+          e.target.classList.add('bg-red-600', 'hover:bg-red-700');
+        }
+        e.target.removeEventListener('click', confirmDelete);
+      };
+      
+      const cancelDelete = () => {
+        e.target.innerHTML = originalHTML;
+        e.target.classList.remove('bg-orange-600', 'hover:bg-orange-700');
+        e.target.classList.add('bg-red-600', 'hover:bg-red-700');
+        e.target.removeEventListener('click', confirmDelete);
+        document.removeEventListener('click', outsideClickHandler);
+      };
+      
+      const outsideClickHandler = (event) => {
+        if (!card.contains(event.target)) {
+          cancelDelete();
+        }
+      };
+      
+      setTimeout(() => {
+        e.target.addEventListener('click', confirmDelete);
+        document.addEventListener('click', outsideClickHandler);
+      }, 100);
+    }
+
+    function updateStandings() {
+      const standingsContainer = document.getElementById('standings-container');
+      
+      const pouleStandings = {};
+
+      allMatches.forEach(match => {
+        if (!match.is_finished) return;
+
+        const poule = match.poule || 'Sans Poule';
+        
+        if (!pouleStandings[poule]) {
+          pouleStandings[poule] = {};
+        }
+
+        const teams = pouleStandings[poule];
+
+        if (!teams[match.team_home]) {
+          teams[match.team_home] = { name: match.team_home, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 };
+        }
+        if (!teams[match.team_away]) {
+          teams[match.team_away] = { name: match.team_away, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 };
+        }
+
+        teams[match.team_home].played++;
+        teams[match.team_away].played++;
+        teams[match.team_home].goalsFor += match.score_home;
+        teams[match.team_home].goalsAgainst += match.score_away;
+        teams[match.team_away].goalsFor += match.score_away;
+        teams[match.team_away].goalsAgainst += match.score_home;
+
+        if (match.score_home > match.score_away) {
+          teams[match.team_home].won++;
+          teams[match.team_home].points += 3;
+          teams[match.team_away].lost++;
+        } else if (match.score_home < match.score_away) {
+          teams[match.team_away].won++;
+          teams[match.team_away].points += 3;
+          teams[match.team_home].lost++;
+        } else {
+          teams[match.team_home].drawn++;
+          teams[match.team_away].drawn++;
+          teams[match.team_home].points++;
+          teams[match.team_away].points++;
+        }
+      });
+
+      if (Object.keys(pouleStandings).length === 0) {
+        standingsContainer.innerHTML = '<p class="text-gray-500 text-center py-8">Aucun résultat pour le moment</p>';
+        return;
+      }
+
+      standingsContainer.innerHTML = Object.keys(pouleStandings).sort().map(poule => {
+        const standings = Object.values(pouleStandings[poule]).sort((a, b) => {
+          if (b.points !== a.points) return b.points - a.points;
+          const diffA = a.goalsFor - a.goalsAgainst;
+          const diffB = b.goalsFor - b.goalsAgainst;
+          if (diffB !== diffA) return diffB - diffA;
+          return b.goalsFor - a.goalsFor;
+        });
+
+        return `
+          <div class="mb-8">
+            <h3 class="text-xl font-bold text-blue-900 mb-3 bg-blue-100 px-4 py-2 rounded-lg">${poule}</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead>
+                  <tr class="border-b-2 border-gray-200">
+                    <th class="text-left py-3 px-2 font-bold text-gray-700 text-sm">Pos</th>
+                    <th class="text-left py-3 px-2 font-bold text-gray-700 text-sm">Équipe</th>
+                    <th class="text-center py-3 px-2 font-bold text-gray-700 text-sm">J</th>
+                    <th class="text-center py-3 px-2 font-bold text-gray-700 text-sm">V</th>
+                    <th class="text-center py-3 px-2 font-bold text-gray-700 text-sm">N</th>
+                    <th class="text-center py-3 px-2 font-bold text-gray-700 text-sm">D</th>
+                    <th class="text-center py-3 px-2 font-bold text-gray-700 text-sm">BP</th>
+                    <th class="text-center py-3 px-2 font-bold text-gray-700 text-sm">BC</th>
+                    <th class="text-center py-3 px-2 font-bold text-gray-700 text-sm">Diff</th>
+                    <th class="text-center py-3 px-2 font-bold text-gray-700 text-sm">Pts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${standings.map((team, index) => {
+                    const diff = team.goalsFor - team.goalsAgainst;
+                    const diffDisplay = diff > 0 ? `+${diff}` : diff;
+                    const positionColor = index === 0 ? 'bg-yellow-100' : index === 1 ? 'bg-gray-100' : '';
+                    const logo = TEAMS[team.name] || '';
+                    
+                    return `
+                      <tr class="${positionColor} border-b border-gray-100">
+                        <td class="py-3 px-2 font-bold text-gray-800">${index + 1}</td>
+                        <td class="py-3 px-2">
+                          <div class="flex items-center gap-2">
+                            ${logo ? `<img src="${logo}" alt="${team.name}" class="w-8 h-8 object-contain" onerror="this.style.display='none';" />` : ''}
+                            <span class="font-semibold text-gray-800 text-sm">${team.name}</span>
+                          </div>
+                        </td>
+                        <td class="py-3 px-2 text-center text-sm">${team.played}</td>
+                        <td class="py-3 px-2 text-center text-green-700 font-semibold text-sm">${team.won}</td>
+                        <td class="py-3 px-2 text-center text-gray-600 text-sm">${team.drawn}</td>
+                        <td class="py-3 px-2 text-center text-red-700 font-semibold text-sm">${team.lost}</td>
+                        <td class="py-3 px-2 text-center font-semibold text-sm">${team.goalsFor}</td>
+                        <td class="py-3 px-2 text-center font-semibold text-sm">${team.goalsAgainst}</td>
+                        <td class="py-3 px-2 text-center font-bold text-sm ${diff > 0 ? 'text-green-700' : diff < 0 ? 'text-red-700' : 'text-gray-600'}">${diffDisplay}</td>
+                        <td class="py-3 px-2 text-center font-bold text-blue-700 text-lg">${team.points}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function showNotification(message, type) {
+      const notification = document.createElement('div');
+      notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg font-semibold ${
+        type === 'success' ? 'bg-green-500' : 'bg-red-500'
+      } text-white z-50`;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.remove();
+      }, 3000);
+    }
+
+    init();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b8c50a2d5bdc2cf',t:'MTc2NzU0NjI2Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
