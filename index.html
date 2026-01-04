@@ -59,7 +59,7 @@
      </div>
     </div><!-- Add Match Form (Admin Only) -->
     <div id="add-match-section" class="hidden bg-white rounded-2xl shadow-lg p-6 mb-8">
-     <h2 class="text-2xl font-bold text-blue-900 mb-4">➕ Ajouter un Match</h2><button id="generate-all-matches-btn" class="w-full mb-4 px-6 py-3 bg-purple-600 text-white rounded-lg font-bold text-lg hover:bg-purple-700 transition-colors"> ⚡ Générer tous les matches de poules (Planning optimisé 9h00-13h30) </button> <button id="generate-finals-btn" class="w-full mb-4 px-6 py-3 bg-orange-600 text-white rounded-lg font-bold text-lg hover:bg-orange-700 transition-colors"> 🏆 Générer les phases finales (après les poules) </button>
+     <h2 class="text-2xl font-bold text-blue-900 mb-4">➕ Ajouter un Match</h2><button id="generate-all-matches-btn" class="w-full mb-4 px-6 py-3 bg-purple-600 text-white rounded-lg font-bold text-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"> ⚡ Générer tous les matches de poules (Planning optimisé 9h00-13h30) </button> <button id="generate-finals-btn" class="w-full mb-4 px-6 py-3 bg-orange-600 text-white rounded-lg font-bold text-lg hover:bg-orange-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"> 🏆 Générer les phases finales (après les poules) </button> <button id="reset-tournament-btn" class="w-full mb-4 px-6 py-3 bg-red-600 text-white rounded-lg font-bold text-lg hover:bg-red-700 transition-colors"> 🗑️ RAZ - Supprimer TOUS les matches </button>
      <form id="add-match-form" class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div><label for="poule-select" class="block text-sm font-semibold text-gray-700 mb-2">Poule</label> <select id="poule-select" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"> <option value="">Sélectionner une poule</option> <option value="Poule A">Poule A</option> <option value="Poule B">Poule B</option> <option value="Poule C">Poule C</option> <option value="Poule D">Poule D</option> <option value="Phase Finale 1">Phase Finale 1</option> <option value="Phase Finale 2">Phase Finale 2</option> <option value="Matchs de Classement">Matchs de Classement</option> </select>
       </div>
@@ -351,6 +351,7 @@
 
       saveToLocalStorage();
       renderMatches();
+      updateGenerateButtonsState();
 
       btn.disabled = false;
       btn.textContent = '🏆 Générer les phases finales (après les poules)';
@@ -370,6 +371,9 @@
       document.getElementById('poule-filter').addEventListener('change', handlePouleFilterChange);
       document.getElementById('generate-all-matches-btn').addEventListener('click', handleGenerateAllMatches);
       document.getElementById('generate-finals-btn').addEventListener('click', handleGenerateFinalsPhase);
+      document.getElementById('reset-tournament-btn').addEventListener('click', handleResetTournament);
+      
+      updateGenerateButtonsState();
       
       document.getElementById('password-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
@@ -413,6 +417,81 @@
           });
         }
       });
+    }
+
+    function updateGenerateButtonsState() {
+      const generatePoolsBtn = document.getElementById('generate-all-matches-btn');
+      const generateFinalsBtn = document.getElementById('generate-finals-btn');
+      
+      // Vérifier si des matches de poules existent déjà
+      const poolsGenerated = allMatches.some(m => 
+        m.poule === 'Poule A' || m.poule === 'Poule B' || 
+        m.poule === 'Poule C' || m.poule === 'Poule D'
+      );
+      
+      // Vérifier si des phases finales existent déjà
+      const finalsGenerated = allMatches.some(m => 
+        m.poule === 'Phase Finale 1' || m.poule === 'Phase Finale 2' || 
+        m.poule === 'Matchs de Classement'
+      );
+      
+      if (poolsGenerated) {
+        generatePoolsBtn.disabled = true;
+        generatePoolsBtn.textContent = '✅ Matches de poules déjà générés';
+      } else {
+        generatePoolsBtn.disabled = false;
+        generatePoolsBtn.textContent = '⚡ Générer tous les matches de poules (Planning optimisé 9h00-13h30)';
+      }
+      
+      if (finalsGenerated) {
+        generateFinalsBtn.disabled = true;
+        generateFinalsBtn.textContent = '✅ Phases finales déjà générées';
+      } else {
+        generateFinalsBtn.disabled = false;
+        generateFinalsBtn.textContent = '🏆 Générer les phases finales (après les poules)';
+      }
+    }
+
+    function handleResetTournament() {
+      const btn = document.getElementById('reset-tournament-btn');
+      const originalText = btn.textContent;
+      
+      btn.textContent = '⚠️ Confirmer la suppression ?';
+      btn.classList.remove('bg-red-600', 'hover:bg-red-700');
+      btn.classList.add('bg-orange-600', 'hover:bg-orange-700');
+      
+      const confirmReset = () => {
+        allMatches = [];
+        tournamentFinalized = false;
+        saveToLocalStorage();
+        renderMatches();
+        updateStandings();
+        updateGenerateButtonsState();
+        showNotification('🗑️ Tous les matches ont été supprimés', 'success');
+        btn.textContent = originalText;
+        btn.classList.remove('bg-orange-600', 'hover:bg-orange-700');
+        btn.classList.add('bg-red-600', 'hover:bg-red-700');
+        btn.removeEventListener('click', confirmReset);
+      };
+      
+      const cancelReset = () => {
+        btn.textContent = originalText;
+        btn.classList.remove('bg-orange-600', 'hover:bg-orange-700');
+        btn.classList.add('bg-red-600', 'hover:bg-red-700');
+        btn.removeEventListener('click', confirmReset);
+        document.removeEventListener('click', outsideClickHandler);
+      };
+      
+      const outsideClickHandler = (event) => {
+        if (event.target !== btn) {
+          cancelReset();
+        }
+      };
+      
+      setTimeout(() => {
+        btn.addEventListener('click', confirmReset, { once: true });
+        document.addEventListener('click', outsideClickHandler, { once: true });
+      }, 100);
     }
 
     function handleGenerateAllMatches() {
@@ -480,6 +559,7 @@
       saveToLocalStorage();
       renderMatches();
       updateStandings();
+      updateGenerateButtonsState();
 
       btn.disabled = false;
       btn.textContent = '⚡ Générer tous les matches de poules (Planning optimisé 9h00-13h30)';
@@ -555,6 +635,7 @@
       saveToLocalStorage();
       renderMatches();
       updateStandings();
+      updateGenerateButtonsState();
       
       e.target.reset();
       showNotification('Match créé avec succès !', 'success');
@@ -960,6 +1041,7 @@
         saveToLocalStorage();
         renderMatches();
         updateStandings();
+        updateGenerateButtonsState();
         showNotification('Match supprimé', 'success');
         e.target.removeEventListener('click', confirmDelete);
       };
@@ -1282,5 +1364,5 @@
 
     init();
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b8d8ae387c1ee96',t:'MTc2NzU1OTEzOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b8d946920f09e85',t:'MTc2NzU1OTUyOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
